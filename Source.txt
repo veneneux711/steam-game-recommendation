@@ -1,4 +1,5 @@
-Data from: 
+Data for KNN from: 
 https://www.kaggle.com/datasets/antonkozyriev/game-recommendations-on-steam?select=recommendations.csv
-
+Data for CB from:
+https://www.kaggle.com/datasets/fronkongames/steam-games-dataset
 Taken from SteamDB

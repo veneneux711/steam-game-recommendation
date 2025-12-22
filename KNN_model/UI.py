@@ -21,7 +21,13 @@ df_fav, fav_games_dict = Data_handler.load_data(fav_games_path, 'fav')
 
 # Create the main window
 root = tk.Tk()
-root.title('Game Tracker')
+root.title('Game Recommendation - KNN Collaborative Filtering System')
+root.geometry('1200x800')
+
+# Header label
+header_label = tk.Label(root, text='KNN COLLABORATIVE FILTERING SYSTEM', 
+                       font=('Arial', 16, 'bold'), fg='blue', bg='lightgray')
+header_label.pack(pady=10)
 
 # Games List
 games_frame = elements.game_list_frame(root, all_games_dict)
@@ -39,5 +45,13 @@ fav_games_frame = elements.fav_games_frame(root, fav_games_dict)
 check_review_frame = elements.check_review_frame(root, played_games_frame, played_games_dict, fav_games_frame, fav_games_dict)
 
 rcm_frame = elements.rcm_frame(root,played_games_dict, fav_games_dict, dir_path, df_all)
+
+# Footer
+footer_label = tk.Label(root, text='KNN Collaborative Filtering - Uses user behavior to find similar users', 
+                       font=('Arial', 10), fg='gray')
+footer_label.pack(pady=5)
+
+print("KNN UI initialized successfully!")
+print(f"Loaded {len(all_games_dict)} games")
 
 root.mainloop()

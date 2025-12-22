@@ -42,8 +42,8 @@ Thumbs.db
 desktop.ini
 
 # Project specific - Large data files (exceeds GitHub 100MB limit)
-DT_model/decision_games.csv
-DT_model/decision_games.json
+CB_model/CB_games.csv
+CB_model/CB_games.json
 KNN_model/final_reviews.csv
 KNN_model/recommendations.csv
 

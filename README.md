@@ -1,11 +1,11 @@
 # Game Recommendation System
 
-Hệ thống recommendation games với 2 models riêng biệt: **KNN** và **Decision Tree**.
+Hệ thống recommendation games với **3 models**: **KNN** (Collaborative Filtering), **Content-Based Filtering** (Genres & Tags), và **Hybrid System** (kết hợp cả 2).
 
 ## 📁 Cấu Trúc Thư Mục
 
 ```
-Steam-Game-Recommendation-KNN-main/
+Steam ML/
 │
 ├── KNN_model/                    # Hệ thống KNN Recommendation
 │   ├── UI.py                     # UI chính cho KNN
@@ -20,69 +20,116 @@ Steam-Game-Recommendation-KNN-main/
 │   ├── fav_games.csv             # Favorite games
 │   └── ... (other KNN files)
 │
-├── DT_model/                     # Hệ thống Decision Tree Recommendation
-│   ├── UI_DecisionTree.py        # UI chính cho Decision Tree
-│   ├── DecisionTree_UI_elements.py
-│   ├── DecisionTree_commands.py
-│   ├── DecisionTree_data_handler.py
-│   ├── DecisionTree_model.py      # Decision Tree model
-│   ├── decision_games.csv         # Games data
-│   ├── decision_games.json       # Games JSON data
-│   └── README_DecisionTree.md    # Hướng dẫn Decision Tree
+├── CB_model/                      # Hệ thống Content-Based Filtering
+│   ├── UI_ContentBased.py        # UI chính cho Content-Based
+│   ├── ContentBased_UI_elements.py
+│   ├── ContentBased_commands.py
+│   ├── ContentBased_data_handler.py
+│   ├── ContentBased_model.py     # Content-Based model (Genres & Tags)
+│   ├── CB_games.csv              # Games data (111K+ games)
+│   └── ...
 │
-└── (root files)                  # Files chung
-    ├── data_preprocessing_1.ipynb
-    ├── games.csv
-    ├── games_metadata.json
-    └── ...
+├── Hybrid_model/                 # Hệ thống Hybrid (KNN + Content-Based)
+│   ├── run_hybrid.py             # Main script
+│   ├── Hybrid_recommendations_reader.py  # Core logic
+│   ├── Hybrid_results_viewer.py  # UI viewer
+│   ├── run_Hybrid.bat            # Batch file
+│   └── hybrid_ranking.csv        # Output file
+│
+│
+├── evaluation.py                 # Evaluation metrics module
+├── Source.txt                    # Nguồn dữ liệu
+├── setup.bat                     # Setup script
+├── run_KNN.bat                   # Run KNN
+├── run_CB.bat                    # Run Content-Based
+│
+├── Documentation Files (Root)    # Tài liệu lý thuyết
+│   ├── KNN_THEORY.md             # Lý thuyết KNN
+│   ├── CB_THEORY.md              # Lý thuyết Content-Based
+│   ├── HYBRID_THEORY.md          # Lý thuyết Hybrid
+│   ├── HYBRID_RANKING_LOGIC.md   # Logic ranking chi tiết
+│   ├── PROJECT_EVALUATION.md     # Đánh giá project
+│   ├── PROJECT_SUMMARY.md        # Tóm tắt project
+│   └── GITHUB_SETUP.md          # Hướng dẫn GitHub
+│
+└── README.md                     # This file
 ```
 
 ## 🚀 Cách Sử Dụng
 
-### KNN Model
+### Quick Start
 
-1. **Chạy KNN UI:**
-   ```bash
-   cd KNN_model
-   python UI.py
-   ```
+**Hybrid System (Recommended):**
+```bash
+cd Hybrid_model
+run_Hybrid.bat
+```
+hoặc
+```bash
+cd Hybrid_model
+python run_hybrid.py
+```
 
-2. **Quy trình:**
-   - Rate games (Like/Interested/Neutral/Dislike)
-   - Save ratings
-   - Get recommendations từ KNN model
+**KNN Model:**
+```bash
+run_KNN.bat
+```
+hoặc
+```bash
+cd KNN_model
+python UI.py
+```
 
-### Decision Tree Model
+**Content-Based Model:**
+```bash
+run_CB.bat
+```
+hoặc
+```bash
+cd CB_model
+python UI_ContentBased.py
+```
 
-1. **Chạy Decision Tree UI:**
-   ```bash
-   cd DT_model
-   python UI_DecisionTree.py
-   ```
+### Quy Trình Sử Dụng
 
-2. **Quy trình:**
-   - Rate games (1-5: Dislike → Like)
-   - Save ratings
-   - Train model
-   - Get recommendations từ Decision Tree model
+#### 1. KNN Model
+- Rate games (Like/Interested/Neutral/Dislike)
+- Save ratings
+- Get recommendations từ KNN model
+- Output: `rcm_games.csv` hoặc `recommendations.csv`
 
-## 📊 So Sánh 2 Models
+#### 2. Content-Based Model
+- Rate games (1-5: Dislike → Like)
+- Save ratings
+- Train model (sử dụng Genres & Tags)
+- Get recommendations dựa trên similarity với games đã rate
+- Output: `cb_recommendations.csv`
 
-| Feature | KNN Model | Decision Tree Model |
-|---------|-----------|---------------------|
-| **Location** | `KNN_model/` | `DT_model/` |
-| **UI File** | `UI.py` | `UI_DecisionTree.py` |
-| **Rating System** | Like/Interested/Neutral/Dislike | 1-5 (Dislike→Like) |
-| **Model Type** | Collaborative Filtering (KNN) | Decision Tree Classifier |
-| **Data Files** | `final_games.csv`, `your_games.csv` | `decision_games.csv` |
-| **Output** | `rcm_games.csv` | `dt_recommendations.csv` |
+#### 3. Hybrid System
+- **Bước 1**: Chạy KNN model và get recommendations
+- **Bước 2**: Chạy Content-Based model và get recommendations
+- **Bước 3**: Chạy Hybrid system để kết hợp cả 2
+- Output: `hybrid_ranking.csv` (hiển thị trong UI window)
+
+## 📊 So Sánh 3 Models
+
+| Feature | KNN Model | Content-Based Model | Hybrid Model |
+|---------|-----------|---------------------|--------------|
+| **Location** | `KNN_model/` | `CB_model/` | `Hybrid_model/` |
+| **UI File** | `UI.py` | `UI_ContentBased.py` | `run_hybrid.py` |
+| **Rating System** | Like/Interested/Neutral/Dislike | 1-5 (Dislike→Like) | Đọc từ 2 models |
+| **Model Type** | Collaborative Filtering | Content-Based | Kết hợp cả 2 |
+| **Data Files** | `final_games.csv`, `your_games.csv` | `CB_games.csv` | Từ cả 2 systems |
+| **Output** | `rcm_games.csv` | `cb_recommendations.csv` | `hybrid_ranking.csv` |
+| **Based On** | User behavior | Game content (Genres/Tags) | Cả 2 |
+| **UI Display** | ✅ Có | ✅ Có | ✅ Có (Table view) |
 
 ## 📝 Lưu Ý
 
-- **Hoàn toàn tách biệt**: 2 models không ảnh hưởng lẫn nhau
-- **Data riêng**: Mỗi model có data files riêng
-- **UI riêng**: Mỗi model có UI riêng biệt
-- **Chạy độc lập**: Có thể chạy cả 2 models cùng lúc
+- **3 Models**: KNN, Content-Based, và Hybrid
+- **Hybrid System**: Kết hợp cả 2 approaches, đọc recommendations từ 2 models
+- **Chạy độc lập**: Có thể chạy từng model riêng
+- **Hybrid UI**: Tự động hiển thị kết quả trong bảng giao diện sau khi tính toán
 
 ## 🔧 Dependencies
 
@@ -92,20 +139,31 @@ pip install pandas numpy scikit-learn tkinter nbformat nbconvert
 
 ## 📚 Documentation
 
-- **KNN Model**: Xem `KNN_model/USAGE_GUIDE.md` và `KNN_model/KNN_Recommendation_Theory_and_Improvements.md`
-- **Decision Tree Model**: Xem `DT_model/README_DecisionTree.md`
+Tất cả tài liệu lý thuyết đã được di chuyển ra root folder:
 
-## 🎯 Quick Start
+- **KNN Theory**: `KNN_THEORY.md` - Lý thuyết và kiến trúc KNN Collaborative Filtering
+- **Content-Based Theory**: `CB_THEORY.md` - Lý thuyết Content-Based Filtering
+- **Hybrid Theory**: `HYBRID_THEORY.md` - Lý thuyết Hybrid System
+- **Hybrid Ranking Logic**: `HYBRID_RANKING_LOGIC.md` - Giải thích chi tiết ranking logic
+- **Project Evaluation**: `PROJECT_EVALUATION.md` - Đánh giá project
+- **Project Summary**: `PROJECT_SUMMARY.md` - Tóm tắt project
+- **GitHub Setup**: `GITHUB_SETUP.md` - Hướng dẫn setup GitHub
 
-### KNN
+## 🔧 Dependencies
+
 ```bash
-cd KNN_model
-python UI.py
+pip install pandas numpy scikit-learn nbformat nbconvert
 ```
 
-### Decision Tree
+Hoặc chạy:
 ```bash
-cd DT_model
-python UI_DecisionTree.py
+setup.bat
 ```
+
+## 📖 Nguồn Dữ Liệu
+
+Xem `Source.txt` để biết nguồn dữ liệu:
+- Kaggle: Game recommendations on Steam
+- Kaggle: Steam games dataset
+- SteamDB
 

@@ -1,0 +1,65 @@
+================================================================================
+DATASET STATISTICS
+================================================================================
+
+KNN MODEL DATASET
+--------------------------------------------------------------------------------
+Total Games: 15080
+Games with Reviews: 15080
+Average Positive Ratio: 80.09%
+Average User Reviews: 5847
+Max User Reviews: 7494460
+Release Years: 1997 - 2023
+
+Reviews Sample (100K):
+  Total Reviews: 100,000
+  Unique Users: 98,803
+  Unique Games: 208
+  Like: 15339 (15.3%)
+  Dislike: 84661 (84.7%)
+
+User Ratings: 50
+
+CONTENT-BASED MODEL DATASET
+--------------------------------------------------------------------------------
+Total Games (Sample 50K): 50,000
+Games with Genres: 48,710
+Games with Tags: 43,521
+Unique Genres: 33
+Unique Tags: 438
+
+Top 10 Genres:
+  Indie: 34627
+  Action: 20375
+  Casual: 19989
+  Adventure: 18659
+  Simulation: 9418
+  Strategy: 9254
+  RPG: 8408
+  Early Access: 5295
+  Free to Play: 3837
+  Sports: 2205
+
+Top 10 Tags:
+  Indie: 28746
+  Singleplayer: 20876
+  Action: 19579
+  Casual: 18811
+  Adventure: 18271
+  2D: 11048
+  Strategy: 9290
+  Simulation: 9027
+  RPG: 7992
+  Puzzle: 7488
+
+User Ratings: 27
+Rating Distribution:
+  1: 3
+  2: 6
+  3: 6
+  4: 4
+  5: 8
+
+================================================================================
+Generated: 2025-12-22 17:16:11.122214
+================================================================================

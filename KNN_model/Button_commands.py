@@ -107,21 +107,74 @@ def remove_favourite(fav_games_listbox, fav_games_dict):
 def confirm(played_games_dict, fav_games_dict, df_all, dir_path):
     played_data = []
     review_numerical_value = {'Like': 1, 'Interested': 0.5, 'Neutral/Not Interested': -0.5, 'Dislike': -1}
+    not_found_games = []
+    
     for gameName, gameReview in played_games_dict.items():
-        review = gameReview.split(' ¬ ')[1]
-        review = review_numerical_value[review.split(': ')[1]]
-        game_id = df_all[df_all['title'] == gameName]['app_id'].values[0]
-        played_data.append({'gameID': game_id, 'gameName': gameName, 'review': review})
-    reviews_df = pd.DataFrame(played_data)
-    reviews_df.to_csv(os.path.join(dir_path, "your_games.csv"), index=False)
-
+        try:
+            review = gameReview.split(' ¬ ')[1]
+            review = review_numerical_value[review.split(': ')[1]]
+            
+            # Tìm game trong DataFrame
+            game_matches = df_all[df_all['title'] == gameName]
+            if game_matches.empty:
+                # Thử tìm không phân biệt hoa thường
+                game_matches = df_all[df_all['title'].str.lower() == gameName.lower()]
+            
+            if not game_matches.empty:
+                game_id = game_matches.iloc[0]['app_id']
+                played_data.append({'gameID': game_id, 'gameName': gameName, 'review': review})
+            else:
+                not_found_games.append(gameName)
+                print(f"Warning: Game '{gameName}' not found in games database. Skipping...")
+        except Exception as e:
+            print(f"Error processing game '{gameName}': {str(e)}")
+            not_found_games.append(gameName)
+    
+    if played_data:
+        reviews_df = pd.DataFrame(played_data)
+        reviews_df.to_csv(os.path.join(dir_path, "your_games.csv"), index=False)
+        print(f"Saved {len(played_data)} played games")
+    else:
+        print("No played games to save")
+    
     fav_data = []
     for gameName, gameInfo in fav_games_dict.items():
-        game_id = df_all[df_all['title'] == gameName]['app_id'].values[0]
-        fav_data.append({'gameID': game_id, 'gameName': gameName})
-    fav_df = pd.DataFrame(fav_data)
-    fav_df.to_csv(os.path.join(dir_path, "fav_games.csv"), index=False)
-    messagebox.showinfo('CSV Saved', 'Played and favourite games saved')
+        try:
+            # Tìm game trong DataFrame
+            game_matches = df_all[df_all['title'] == gameName]
+            if game_matches.empty:
+                # Thử tìm không phân biệt hoa thường
+                game_matches = df_all[df_all['title'].str.lower() == gameName.lower()]
+            
+            if not game_matches.empty:
+                game_id = game_matches.iloc[0]['app_id']
+                fav_data.append({'gameID': game_id, 'gameName': gameName})
+            else:
+                if gameName not in not_found_games:
+                    not_found_games.append(gameName)
+                print(f"Warning: Game '{gameName}' not found in games database. Skipping...")
+        except Exception as e:
+            print(f"Error processing favorite game '{gameName}': {str(e)}")
+            if gameName not in not_found_games:
+                not_found_games.append(gameName)
+    
+    if fav_data:
+        fav_df = pd.DataFrame(fav_data)
+        fav_df.to_csv(os.path.join(dir_path, "fav_games.csv"), index=False)
+        print(f"Saved {len(fav_data)} favorite games")
+    else:
+        print("No favorite games to save")
+    
+    # Hiển thị message
+    if not_found_games:
+        msg = f'Saved games successfully!\n\n'
+        msg += f'Warning: {len(not_found_games)} game(s) not found in database:\n'
+        msg += '\n'.join(not_found_games[:5])  # Chỉ hiển thị 5 games đầu
+        if len(not_found_games) > 5:
+            msg += f'\n... and {len(not_found_games) - 5} more'
+        messagebox.showwarning('CSV Saved with Warnings', msg)
+    else:
+        messagebox.showinfo('CSV Saved', 'Played and favourite games saved successfully!')
 
 def get_recommendations(dir_path):
     try:

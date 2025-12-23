@@ -43,9 +43,19 @@ desktop.ini
 
 # Project specific - Large data files (exceeds GitHub 100MB limit)
 CB_model/CB_games.csv
-CB_model/CB_games.json
 KNN_model/final_reviews.csv
 KNN_model/recommendations.csv
+CB_model/CB_games.csv.bak_v2
+KNN_model/games.csv
+KNN_model/final_games.csv
+KNN_model/games_metadata.json
+
+
+
+
+# Backup files
+*.bak
+*.bak_v*
 
 # Other large data files (optional - uncomment if needed)
 # *.csv

@@ -1,169 +1,114 @@
-# Game Recommendation System
+Steam ML - Hệ Thống Gợi Ý Game Thông Minh
+Steam Game Recommendation System là một đồ án nghiên cứu áp dụng các kỹ thuật Học máy (Machine Learning) để xây dựng hệ thống tư vấn game cá nhân hóa. Hệ thống kết hợp sức mạnh của việc phân tích nội dung game và hành vi cộng đồng người chơi để đưa ra những gợi ý chính xác nhất.
 
-Hệ thống recommendation games với **3 models**: **KNN** (Collaborative Filtering), **Content-Based Filtering** (Genres & Tags), và **Hybrid System** (kết hợp cả 2).
+Tính Năng Nổi Bật
+Đa Mô Hình: Tích hợp 3 thuật toán gợi ý riêng biệt:
+Content-Based Filtering (CB): Phân tích nội dung (Tags, Genres) để tìm game tương tự game bạn thích. Sử dụng SVD để hiểu ngữ nghĩa.
+Collaborative Filtering (KNN): Tìm kiếm người chơi có "gu" giống bạn để xem họ chơi gì.
+Hybrid Model: Kết hợp 2 model, sử dụng cơ chế "Synergy Boost" để đẩy ranking các game phù hợp lên.
+Xử Lý Dữ Liệu Thông Minh:
+Tự động đồng bộ hóa dữ liệu giữa các nguồn khác nhau.
+Fuzzy Name Matching: Khắc phục lỗi lệch ID game giữa các bộ dữ liệu.
+Shovelware Filter: Tự động lọc bỏ các game rác, game kém chất lượng.
+Giao Diện Trực Quan (GUI): Xây dựng bằng Tkinter, cho phép tìm kiếm, đánh giá (Rate), quản lý danh sách yêu thích và xem kết quả trực tiếp.
 
-## 📁 Cấu Trúc Thư Mục
-
-```
+Cấu Trúc Dự Án
 Steam ML/
+├── CB_model/                  # Mô hình Content-Based
+│   ├── CB_games.csv           # Dữ liệu game (đã được làm gọn)
+│   ├── cb_model.pkl           # Model đã huấn luyện (Lưu trữ SVD & Vectorizer)
+│   ├── cb_recommendations.csv # Kết quả gợi ý từ CB
+│   ├── ContentBased_model.py  # Thuật toán chính (TF-IDF + SVD)
+│   └── UI_ContentBased.py     # Giao diện CB
 │
-├── KNN_model/                    # Hệ thống KNN Recommendation
-│   ├── UI.py                     # UI chính cho KNN
-│   ├── UI_elements.py            # UI elements
-│   ├── Button_commands.py        # Button commands
-│   ├── Data_handler.py           # Data handler
-│   ├── knn_model.ipynb           # KNN model notebook
-│   ├── knn_improvements.py       # KNN improvements
-│   ├── final_games.csv           # Games data
-│   ├── final_reviews.csv         # Reviews data
-│   ├── your_games.csv            # User games
-│   ├── fav_games.csv             # Favorite games
-│   └── ... (other KNN files)
+├── KNN_model/                 # Mô hình Collaborative Filtering
+│   ├── final_games.csv        # Danh sách game chuẩn
+│   ├── final_reviews.csv      # Dữ liệu reviews người dùng
+│   ├── rcm_games.csv          # Kết quả gợi ý từ KNN
+│   └── UI.py                  # Giao diện KNN
 │
-├── CB_model/                      # Hệ thống Content-Based Filtering
-│   ├── UI_ContentBased.py        # UI chính cho Content-Based
-│   ├── ContentBased_UI_elements.py
-│   ├── ContentBased_commands.py
-│   ├── ContentBased_data_handler.py
-│   ├── ContentBased_model.py     # Content-Based model (Genres & Tags)
-│   ├── CB_games.csv              # Games data (111K+ games)
-│   └── ...
+├── Hybrid_model/              # Mô hình Lai
+│   ├── run_hybrid.py          # Script chạy chính
+│   └── Hybrid_recommendations_reader.py # Logic kết hợp & Chuẩn hóa điểm
 │
-├── Hybrid_model/                 # Hệ thống Hybrid (KNN + Content-Based)
-│   ├── run_hybrid.py             # Main script
-│   ├── Hybrid_recommendations_reader.py  # Core logic
-│   ├── Hybrid_results_viewer.py  # UI viewer
-│   ├── run_Hybrid.bat            # Batch file
-│   └── hybrid_ranking.csv        # Output file
-│
-│
-├── evaluation.py                 # Evaluation metrics module
-├── Source.txt                    # Nguồn dữ liệu
-├── setup.bat                     # Setup script
-├── run_KNN.bat                   # Run KNN
-├── run_CB.bat                    # Run Content-Based
-│
-├── Documentation Files (Root)    # Tài liệu lý thuyết
-│   ├── KNN_THEORY.md             # Lý thuyết KNN
-│   ├── CB_THEORY.md              # Lý thuyết Content-Based
-│   ├── HYBRID_THEORY.md          # Lý thuyết Hybrid
-│   ├── HYBRID_RANKING_LOGIC.md   # Logic ranking chi tiết
-│   ├── PROJECT_EVALUATION.md     # Đánh giá project
-│   ├── PROJECT_SUMMARY.md        # Tóm tắt project
-│   └── GITHUB_SETUP.md          # Hướng dẫn GitHub
-│
-└── README.md                     # This file
-```
+├── results/                   # Nơi lưu kết quả cuối cùng (hybrid_ranking.csv)
+├── user_data/                 # Lưu lịch sử đánh giá của người dùng
+├── reduce_data.py             # Script đồng bộ và nén dữ liệu CB theo KNN
+├── setup.bat                  # Cài đặt thư viện
+└── run_*.bat                  # Các file chạy nhanh (Shortcuts)
 
-## 🚀 Cách Sử Dụng
+Cơ Chế Hoạt Động (Technical Details)
 
-### Quick Start
+1. Content-Based Model (CB)
+Kỹ thuật: TF-IDF (Term Frequency-Inverse Document Frequency) kết hợp với TruncatedSVD (LSA) để giảm chiều dữ liệu, giúp máy tính "hiểu" được ngữ cảnh và thể loại game thay vì chỉ so sánh từ khóa đơn thuần.
+Trọng số: Áp dụng Positional Weighting (Ưu tiên Genre và các Tag đầu tiên).
+Điểm số: 
+ScoreCB = (Similarity * 0.85) + (Popularity * 0.15)
 
-**Hybrid System (Recommended):**
-```bash
-cd Hybrid_model
-run_Hybrid.bat
-```
-hoặc
-```bash
-cd Hybrid_model
-python run_hybrid.py
-```
+2. KNN Model (Collaborative Filtering)
+Kỹ thuật: User-Based Collaborative Filtering sử dụng khoảng cách Cosine trên ma trận thưa (Sparse Matrix).
+Logic: Tìm tập hợp những người dùng (Neighbors) có lịch sử chơi game trùng khớp khoảng 70-80% với bạn, từ đó gợi ý những game mà họ đánh giá cao.
 
-**KNN Model:**
-```bash
-run_KNN.bat
-```
-hoặc
-```bash
-cd KNN_model
-python UI.py
-```
+3. Hybrid Model
+Kỹ thuật: Weighted Ensemble & Geometric Mean Boost.
+Logic:
+Chuẩn hóa điểm số từ KNN và CB về thang [0, 1].
+Ghép nối dữ liệu bằng cách chuẩn hóa tên game (xóa ký tự đặc biệt, viết thường).
+Synergy Boost: Nếu một game được cả 2 mô hình đề xuất, điểm số sẽ được cộng hưởng tăng mạnh.
 
-**Content-Based Model:**
-```bash
-run_CB.bat
-```
-hoặc
-```bash
-cd CB_model
-python UI_ContentBased.py
-```
+2. KNN Model (Collaborative Filtering)
+Kỹ thuật: User-Based Collaborative Filtering sử dụng khoảng cách Cosine trên ma trận thưa (Sparse Matrix).
+Logic: Tìm tập hợp những người dùng (Neighbors) có lịch sử chơi game trùng khớp khoảng 70-80% với bạn, từ đó gợi ý những game mà họ đánh giá cao.
 
-### Quy Trình Sử Dụng
+3. Hybrid Model
+Kỹ thuật: Weighted Ensemble & Geometric Mean Boost.
+Logic:
+Chuẩn hóa điểm số từ KNN và CB về thang [0, 1].
+Ghép nối dữ liệu bằng cách chuẩn hóa tên game (xóa ký tự đặc biệt, viết thường).
+Synergy Boost: Nếu một game được cả 2 mô hình đề xuất, điểm số sẽ được cộng hưởng tăng mạnh.
 
-#### 1. KNN Model
-- Rate games (Like/Interested/Neutral/Dislike)
-- Save ratings
-- Get recommendations từ KNN model
-- Output: `rcm_games.csv` hoặc `recommendations.csv`
+Cài Đặt & Chuẩn Bị Dữ Liệu
 
-#### 2. Content-Based Model
-- Rate games (1-5: Dislike → Like)
-- Save ratings
-- Train model (sử dụng Genres & Tags)
-- Get recommendations dựa trên similarity với games đã rate
-- Output: `cb_recommendations.csv`
-
-#### 3. Hybrid System
-- **Bước 1**: Chạy KNN model và get recommendations
-- **Bước 2**: Chạy Content-Based model và get recommendations
-- **Bước 3**: Chạy Hybrid system để kết hợp cả 2
-- Output: `hybrid_ranking.csv` (hiển thị trong UI window)
-
-## 📊 So Sánh 3 Models
-
-| Feature | KNN Model | Content-Based Model | Hybrid Model |
-|---------|-----------|---------------------|--------------|
-| **Location** | `KNN_model/` | `CB_model/` | `Hybrid_model/` |
-| **UI File** | `UI.py` | `UI_ContentBased.py` | `run_hybrid.py` |
-| **Rating System** | Like/Interested/Neutral/Dislike | 1-5 (Dislike→Like) | Đọc từ 2 models |
-| **Model Type** | Collaborative Filtering | Content-Based | Kết hợp cả 2 |
-| **Data Files** | `final_games.csv`, `your_games.csv` | `CB_games.csv` | Từ cả 2 systems |
-| **Output** | `rcm_games.csv` | `cb_recommendations.csv` | `hybrid_ranking.csv` |
-| **Based On** | User behavior | Game content (Genres/Tags) | Cả 2 |
-| **UI Display** | ✅ Có | ✅ Có | ✅ Có (Table view) |
-
-## 📝 Lưu Ý
-
-- **3 Models**: KNN, Content-Based, và Hybrid
-- **Hybrid System**: Kết hợp cả 2 approaches, đọc recommendations từ 2 models
-- **Chạy độc lập**: Có thể chạy từng model riêng
-- **Hybrid UI**: Tự động hiển thị kết quả trong bảng giao diện sau khi tính toán
-
-## 🔧 Dependencies
-
-```bash
-pip install pandas numpy scikit-learn tkinter nbformat nbconvert
-```
-
-## 📚 Documentation
-
-Tất cả tài liệu lý thuyết đã được di chuyển ra root folder:
-
-- **KNN Theory**: `KNN_THEORY.md` - Lý thuyết và kiến trúc KNN Collaborative Filtering
-- **Content-Based Theory**: `CB_THEORY.md` - Lý thuyết Content-Based Filtering
-- **Hybrid Theory**: `HYBRID_THEORY.md` - Lý thuyết Hybrid System
-- **Hybrid Ranking Logic**: `HYBRID_RANKING_LOGIC.md` - Giải thích chi tiết ranking logic
-- **Project Evaluation**: `PROJECT_EVALUATION.md` - Đánh giá project
-- **Project Summary**: `PROJECT_SUMMARY.md` - Tóm tắt project
-- **GitHub Setup**: `GITHUB_SETUP.md` - Hướng dẫn setup GitHub
-
-## 🔧 Dependencies
-
-```bash
-pip install pandas numpy scikit-learn nbformat nbconvert
-```
-
-Hoặc chạy:
-```bash
+Bước 1: Cài đặt Môi trường
+Chạy file setup.bat để cài đặt các thư viện Python cần thiết:
 setup.bat
-```
+(Yêu cầu: Python 3.x, pandas, numpy, scikit-learn, scipy, tkinter)
 
-## 📖 Nguồn Dữ Liệu
+Bước 2: Tải Dữ Liệu (Quan Trọng)
+Dự án sử dụng 2 bộ dữ liệu từ Kaggle. Bạn cần tải về và đặt đúng vị trí:
+Dữ liệu cho KNN:
+Nguồn: Steam Game Recommendations (Anton Kozyriev)
+Giải nén vào thư mục KNN_model/.
+Chạy Notebook KNN_model/data_preprocessing_1.ipynb để tạo ra file final_games.csv và final_reviews.csv.
 
-Xem `Source.txt` để biết nguồn dữ liệu:
-- Kaggle: Game recommendations on Steam
-- Kaggle: Steam games dataset
-- SteamDB
+Dữ liệu cho Content-Based:
+Nguồn: Steam Games Dataset (Fronkon Games)
+Giải nén vào thư mục CB_model/.
+Đổi tên file thành CB_games.csv.
+Đồng bộ dữ liệu:
+Chạy script sau để cắt giảm dữ liệu CB cho khớp với KNN (giúp train nhanh hơn):
+python reduce_data.py
 
+Hướng Dẫn Sử Dụng
+Để có kết quả tốt nhất, hãy thực hiện theo đúng trình tự:
+
+1. Chạy Content-Based (CB)
+Mở file: run_CB.bat
+Thao tác:
+Tìm kiếm và đánh giá (Rate) các game bạn thích (Ví dụ: Witcher 3, Cyberpunk...).
+Bấm Save Ratings.
+Bấm Train Model (Chỉ cần làm lần đầu hoặc khi cập nhật data).
+Bấm Get Recommendations (Bắt buộc để tạo file dữ liệu cho Hybrid).
+
+2. Chạy KNN
+Mở file: run_KNN.bat
+Thao tác:
+Nhập tên game vào ô tìm kiếm -> Thêm vào danh sách "Played" -> Chấm điểm (Like/Dislike).
+Bấm Confirm để lưu dữ liệu.
+Bấm Get Recommendations (Bắt buộc).
+
+3. Chạy Hybrid (Kết quả cuối cùng)
+Mở file: run_Hybrid.bat
+Hệ thống sẽ tự động đọc kết quả từ 2 bước trên, tính toán và hiển thị Bảng xếp hạng tối ưu nhất.
+Xanh lá: Game được cả 2 mô hình đề xuất (Rất nên chơi).
+Trắng: Game do một trong hai mô hình đề xuất.

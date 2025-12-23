@@ -1,6 +1,8 @@
 @echo off
-echo Starting Content-Based Filtering Recommendation System...
-cd DT_model
+echo ========================================
+echo Content-Based Filtering System
+echo ========================================
+cd CB_model
 python UI_ContentBased.py
 cd ..
 pause

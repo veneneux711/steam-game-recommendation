@@ -1,16 +1,12 @@
 """
 Hybrid Recommendation System - Standalone Script
 Đọc recommendations từ KNN và Content-Based models đã chạy và tính hybrid ranking
-
-Cách sử dụng:
-1. Chạy KNN model trước: cd KNN_model && python UI.py -> Get Recommendations
-2. Chạy Content-Based model: cd CB_model && python UI_ContentBased.py -> Get Recommendations
-3. Chạy script này: python run_hybrid.py
 """
 
 import os
 import sys
 import tkinter as tk
+# Import hàm save và calculate từ file reader (đảm bảo bạn đã sửa file này như bài trước)
 from Hybrid_recommendations_reader import calculate_hybrid_ranking, save_hybrid_ranking
 from Hybrid_results_viewer import show_hybrid_results
 
@@ -62,7 +58,7 @@ print("-"*80)
 hybrid_ranking = calculate_hybrid_ranking(
     knn_dir=knn_dir,
     cb_dir=cb_dir,
-    top_n=50,  # Top 50 hybrid recommendations (từ 30 KNN + 30 CB)
+    top_n=50,
     knn_weight=0.5,
     cb_weight=0.5
 )
@@ -73,12 +69,18 @@ if hybrid_ranking.empty:
     sys.exit(1)
 
 # Lưu kết quả
-output_path = os.path.join(hybrid_dir, "hybrid_ranking.csv")
+results_dir = os.path.join(os.path.dirname(hybrid_dir), "results")
+os.makedirs(results_dir, exist_ok=True)
+output_path = os.path.join(results_dir, "hybrid_ranking.csv")
+
+# Lưu file (Sử dụng hàm đã import)
 if save_hybrid_ranking(hybrid_ranking, output_path):
     print(f"✅ Saved hybrid rankings to: {output_path}")
     print(f"   Total recommendations: {len(hybrid_ranking)}")
+    # QUAN TRỌNG: Không dùng sys.exit(0) ở đây để code chạy tiếp xuống phần mở Window
 else:
     print("❌ ERROR: Failed to save hybrid rankings!")
+    # Nếu lưu lỗi thì dừng luôn cũng được, hoặc chạy tiếp tùy bạn. Ở đây ta dừng.
     sys.exit(1)
 
 print()
@@ -88,6 +90,7 @@ print("="*80)
 
 # Hiển thị kết quả trong UI
 try:
+    # Yêu cầu phải có file Hybrid_results_viewer.py
     show_hybrid_results(hybrid_ranking)
 except Exception as e:
     print(f"Error displaying UI: {str(e)}")
@@ -98,4 +101,3 @@ except Exception as e:
     print("="*80)
     print(hybrid_ranking.to_string(index=False))
     print("="*80)
-

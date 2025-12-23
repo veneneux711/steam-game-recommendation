@@ -8,9 +8,6 @@ def load_csv(file_path):
     except FileNotFoundError:
         print('Notification', f'File {file_path} not found.')
         return None
-    except pd.errors.EmptyDataError:
-        print(f'File {file_path} is empty.')
-        return None
     
 
 def load_data(file_path, type):

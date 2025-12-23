@@ -1,5 +1,6 @@
 """
 UI Elements cho Content-Based Filtering System
+Updated: Removed Min Positive Ratio, Cleaned up Layout
 """
 
 import tkinter as tk
@@ -7,9 +8,7 @@ import ContentBased_commands as cb_commands
 
 
 def search_frame(root, games_dict, list_frame):
-    """
-    Search frame
-    """
+    """Search frame"""
     search_frame = tk.Frame(root)
     search_frame.pack(pady=10)
 
@@ -29,9 +28,7 @@ def search_frame(root, games_dict, list_frame):
 
 
 def games_list_frame(root, games_dict):
-    """
-    Games list frame
-    """
+    """Games list frame"""
     games_frame = tk.Frame(root)
     games_frame.pack(pady=10)
 
@@ -53,9 +50,7 @@ def games_list_frame(root, games_dict):
 
 
 def user_ratings_frame(root, user_ratings_dict):
-    """
-    User ratings frame
-    """
+    """User ratings frame"""
     ratings_frame = tk.Frame(root)
     ratings_frame.pack(pady=10)
 
@@ -76,10 +71,8 @@ def user_ratings_frame(root, user_ratings_dict):
     return ratings_frame
 
 
-def rating_buttons_frame(root, games_frame, ratings_frame, user_ratings_dict):
-    """
-    Rating buttons frame
-    """
+def rating_buttons_frame(root, games_frame, ratings_frame, user_ratings_dict, dir_path):
+    """Rating buttons frame"""
     for widget in games_frame.winfo_children():
         if isinstance(widget, tk.Listbox):
             games_listbox = widget
@@ -95,89 +88,82 @@ def rating_buttons_frame(root, games_frame, ratings_frame, user_ratings_dict):
                            font=('Arial', 12, 'bold'))
     rating_label.grid(row=0, column=0, padx=10)
 
-    like_button = tk.Button(rating_frame, text='Like (5)', 
-                           command=lambda: cb_commands.add_rating(5, games_listbox, ratings_listbox, user_ratings_dict), 
-                           font=('Arial', 11), bg='lightgreen')
-    like_button.grid(row=0, column=1, padx=5)
+    # Các nút đánh giá
+    buttons_config = [
+        ('Like (5)', 5, 'lightgreen'),
+        ('Good (4)', 4, 'lightblue'),
+        ('Neutral (3)', 3, 'lightyellow'),
+        ('Bad (2)', 2, 'lightcoral'),
+        ('Dislike (1)', 1, 'lightpink')
+    ]
 
-    good_button = tk.Button(rating_frame, text='Good (4)', 
-                           command=lambda: cb_commands.add_rating(4, games_listbox, ratings_listbox, user_ratings_dict), 
-                           font=('Arial', 11), bg='lightblue')
-    good_button.grid(row=0, column=2, padx=5)
+    col = 1
+    for text, rating, color in buttons_config:
+        btn = tk.Button(rating_frame, text=text, 
+                       command=lambda r=rating: cb_commands.add_rating(r, games_listbox, ratings_listbox, user_ratings_dict), 
+                       font=('Arial', 11), bg=color)
+        btn.grid(row=0, column=col, padx=5)
+        col += 1
 
-    neutral_button = tk.Button(rating_frame, text='Neutral (3)', 
-                              command=lambda: cb_commands.add_rating(3, games_listbox, ratings_listbox, user_ratings_dict), 
-                              font=('Arial', 11), bg='lightyellow')
-    neutral_button.grid(row=0, column=3, padx=5)
+    delete_button = tk.Button(rating_frame, text='Delete Rating',
+                               command=lambda: cb_commands.remove_rating(ratings_listbox, user_ratings_dict),
+                               font=('Arial', 11), bg='lightgray')
+    delete_button.grid(row=0, column=col, padx=5)
 
-    bad_button = tk.Button(rating_frame, text='Bad (2)', 
-                          command=lambda: cb_commands.add_rating(2, games_listbox, ratings_listbox, user_ratings_dict), 
-                          font=('Arial', 11), bg='lightcoral')
-    bad_button.grid(row=0, column=4, padx=5)
-
-    dislike_button = tk.Button(rating_frame, text='Dislike (1)', 
-                              command=lambda: cb_commands.add_rating(1, games_listbox, ratings_listbox, user_ratings_dict), 
-                              font=('Arial', 11), bg='lightpink')
-    dislike_button.grid(row=0, column=5, padx=5)
-
-    delete_button = tk.Button(rating_frame, text='Delete Rating', 
-                              command=lambda: cb_commands.remove_rating(ratings_listbox, user_ratings_dict), 
-                              font=('Arial', 11), bg='lightgray')
-    delete_button.grid(row=0, column=6, padx=5)
+    clear_all_button = tk.Button(rating_frame, text='Clear All Ratings',
+                                command=lambda: cb_commands.clear_all_ratings(ratings_listbox, user_ratings_dict, dir_path),
+                                font=('Arial', 11), bg='lightcoral')
+    clear_all_button.grid(row=0, column=col+1, padx=5)
 
     return rating_frame
 
 
 def recommendations_frame(root, user_ratings_dict, dir_path, df_games, recommender=None):
-    """
-    Recommendations frame
-    """
+    """Recommendations frame - Đã thêm nút Clear Data"""
     recommendations_frame = tk.Frame(root)
     recommendations_frame.pack(pady=10)
 
-    # Buttons
+    # 1. Save Ratings
     save_button = tk.Button(recommendations_frame, text='Save Ratings', 
                            command=lambda: cb_commands.save_ratings(user_ratings_dict, df_games, dir_path), 
                            font=('Arial', 12), bg='lightblue')
     save_button.grid(row=0, column=0, padx=10, pady=10)
 
+    # 2. Train Model
     train_button = tk.Button(recommendations_frame, text='Train Model', 
                             command=lambda: cb_commands.train_model(dir_path, root=root), 
                             font=('Arial', 12), bg='lightgreen')
     train_button.grid(row=0, column=1, padx=10, pady=10)
 
+    # 3. Get Recommendations
     recommend_button = tk.Button(recommendations_frame, text='Get Recommendations', 
                                 command=lambda: cb_commands.get_recommendations(dir_path, root=root, preloaded_recommender=recommender), 
                                 font=('Arial', 12), bg='lightyellow')
     recommend_button.grid(row=0, column=2, padx=10, pady=10)
+
+    # 4. Clear Data (NÚT MỚI)
+    clear_button = tk.Button(recommendations_frame, text='Clear Data', 
+                            command=lambda: cb_commands.clear_system_data(dir_path, root=root), 
+                            font=('Arial', 12), bg='lightcoral', fg='white')
+    clear_button.grid(row=0, column=3, padx=10, pady=10)
 
     return recommendations_frame
 
 
 def preferences_frame(root):
     """
-    User preferences frame
+    User preferences frame - Đã xóa Ratio input
     """
     prefs_frame = tk.Frame(root)
     prefs_frame.pack(pady=10)
 
-    prefs_label = tk.Label(prefs_frame, text='Preferences:', 
-                           font=('Arial', 12, 'bold'))
-    prefs_label.grid(row=0, column=0, columnspan=3, pady=5)
+    # Max price (Căn giữa)
+    price_label = tk.Label(prefs_frame, text='Max Price ($):', font=('Arial', 11))
+    price_label.grid(row=0, column=0, padx=5)
+    
+    price_entry = tk.Entry(prefs_frame, width=10, font=('Arial', 11))
+    price_entry.grid(row=0, column=1, padx=5)
+    price_entry.insert(0, '100') # Default 100$
 
-    # Max price
-    price_label = tk.Label(prefs_frame, text='Max Price ($):')
-    price_label.grid(row=1, column=0, padx=5)
-    price_entry = tk.Entry(prefs_frame, width=10)
-    price_entry.grid(row=1, column=1, padx=5)
-    price_entry.insert(0, '100')
-
-    # Min positive ratio
-    ratio_label = tk.Label(prefs_frame, text='Min Positive Ratio:')
-    ratio_label.grid(row=1, column=2, padx=5)
-    ratio_entry = tk.Entry(prefs_frame, width=10)
-    ratio_entry.grid(row=1, column=3, padx=5)
-    ratio_entry.insert(0, '0.7')
-
-    return prefs_frame, price_entry, ratio_entry
-
+    # Lưu ý: Hàm này bây giờ chỉ trả về 2 giá trị thay vì 3
+    return prefs_frame, price_entry

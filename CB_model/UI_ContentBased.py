@@ -44,7 +44,7 @@ except Exception as e:
 user_ratings_dict = {}
 
 # Load existing ratings if available
-ratings_file = os.path.join(dir_path, "cb_user_ratings.json")
+ratings_file = os.path.join(os.path.dirname(dir_path), "user_data", "cb_user_ratings.json")
 if os.path.exists(ratings_file):
     ratings_data = cb_handler.load_ratings_data(ratings_file)
     if ratings_data:
@@ -98,11 +98,11 @@ user_ratings_frame = cb_elements.user_ratings_frame(root, user_ratings_dict)
 
 # Rating Buttons
 rating_buttons_frame = cb_elements.rating_buttons_frame(
-    root, games_frame, user_ratings_frame, user_ratings_dict
+    root, games_frame, user_ratings_frame, user_ratings_dict, dir_path
 )
 
 # Preferences Frame
-preferences_frame, price_entry, ratio_entry = cb_elements.preferences_frame(root)
+preferences_frame, price_entry = cb_elements.preferences_frame(root)
 
 # Recommendations Frame (truyền pre-loaded recommender nếu có)
 recommendations_frame = cb_elements.recommendations_frame(

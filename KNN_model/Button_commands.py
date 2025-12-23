@@ -25,160 +25,131 @@ def update_search(search_frame, games_dict, list_frame):
             if search_query in game_name.lower():
                 games_listbox.insert(tk.END, game_info)
 
-def add_review(review, games_listbox,played_games_listbox ,played_games_dict):
+def add_review(review, games_listbox, played_games_listbox, played_games_dict):
     selected_game_info = games_listbox.get(tk.ACTIVE)
     if selected_game_info:
         match = re.search(r'Name:\s*(.*?)\s*¬', selected_game_info)
         if match:
             selected_game_name = match.group(1).strip()
         else:
-            messagebox.showwarning('Invalid Format', 'Failed to extract game name.')
-            return
+            # Fallback nếu string không khớp regex (trường hợp tên game đơn giản)
+            selected_game_name = selected_game_info.split('¬')[0].replace('Name: ', '').strip()
         
-        if selected_game_name in played_games_dict:
-            # Delete existing review
-            del played_games_dict[selected_game_name]
-        
-        # Add new review
+        # Add or Update review
         played_games_dict[selected_game_name] = f"Name: {selected_game_name} ¬ Review: {review}"
 
-        played_games_listbox.delete(0, tk.END)  # Clear the listbox
-        print(played_games_dict)
-        for game_name, game_review in played_games_dict.items():
+        # Update Listbox
+        played_games_listbox.delete(0, tk.END)
+        for game_review in played_games_dict.values():
             played_games_listbox.insert(tk.END, game_review)
 
 def remove_review(played_games_listbox, played_games_dict):
-    selected_review = played_games_listbox.curselection()
-    if selected_review:
-        index = selected_review[0]
+    selected_indices = played_games_listbox.curselection()
+    if selected_indices:
+        index = selected_indices[0]
         item = played_games_listbox.get(index)
+        
+        # Extract name to delete from dict
+        match = re.search(r'Name:\s*(.*?)\s*¬', item)
+        if match:
+            game_name = match.group(1).strip()
+            if game_name in played_games_dict:
+                del played_games_dict[game_name]
         
         # Delete from listbox
         played_games_listbox.delete(index)
-        
-        # Find corresponding key in dictionary and delete
-        for key, value in played_games_dict.items():
-            if value == item:
-                del played_games_dict[key]
-                break
-        print(played_games_dict)
+
+def clear_all_reviews(played_games_listbox, played_games_dict):
+    if not played_games_dict:
+        return
+    if messagebox.askyesno("Clear All", "Are you sure you want to delete ALL reviews?"):
+        played_games_dict.clear()
+        played_games_listbox.delete(0, tk.END)
 
 def add_favourite(played_games_listbox, played_games_dict, fav_games_listbox, fav_games_dict):
-    selected_game_info = played_games_listbox.get(tk.ACTIVE)
-    if selected_game_info:
-        match = re.search(r'Name:\s*(.*?)\s*¬', selected_game_info)
+    selected_indices = played_games_listbox.curselection()
+    if selected_indices:
+        item = played_games_listbox.get(selected_indices[0])
+        
+        # Extract name
+        match = re.search(r'Name:\s*(.*?)\s*¬', item)
         if match:
             selected_game_name = match.group(1).strip()
-        else:
-            messagebox.showwarning('Invalid Format', 'Failed to extract game name.')
-            return
-        
-        if selected_game_name in fav_games_dict:
-            messagebox.showinfo('Already Favorited', 'This game is already in your favorites!')
-            return
-        
-        # Find the game in played_games_dict
-        if selected_game_name in played_games_dict:
-            # Add to fav_games_dict and update fav_games_listbox
+            
+            if selected_game_name in fav_games_dict:
+                messagebox.showinfo('Info', 'This game is already in your favorites!')
+                return
+            
+            # Add to fav dict and listbox
             fav_games_dict[selected_game_name] = selected_game_name
-            fav_games_listbox.insert(tk.END, fav_games_dict[selected_game_name])
-
-        else:
-            messagebox.showwarning('Game Not Found', 'Selected game not found in played games.')
-    print(fav_games_dict)
-
+            fav_games_listbox.insert(tk.END, selected_game_name)
+    else:
+        messagebox.showwarning("Selection", "Please select a game from 'Played Games' to mark as favourite.")
 
 def remove_favourite(fav_games_listbox, fav_games_dict):
-    selected_game = fav_games_listbox.curselection()
-    if selected_game:
-        index = selected_game[0]
-        item = fav_games_listbox.get(index)
+    selected_indices = fav_games_listbox.curselection()
+    if selected_indices:
+        index = selected_indices[0]
+        game_name = fav_games_listbox.get(index)
+        
+        # Delete from dict
+        if game_name in fav_games_dict:
+            del fav_games_dict[game_name]
         
         # Delete from listbox
         fav_games_listbox.delete(index)
-        
-        # Find corresponding key in dictionary and delete
-        for key, value in fav_games_dict.items():
-            if value == item:
-                del fav_games_dict[key]
-                break
-        print(fav_games_dict)
+
+def clear_all_favourites(fav_games_listbox, fav_games_dict):
+    if not fav_games_dict:
+        return
+    if messagebox.askyesno("Clear All", "Are you sure you want to delete ALL favourites?"):
+        fav_games_dict.clear()
+        fav_games_listbox.delete(0, tk.END)
 
 def confirm(played_games_dict, fav_games_dict, df_all, dir_path):
-    played_data = []
-    review_numerical_value = {'Like': 1, 'Interested': 0.5, 'Neutral/Not Interested': -0.5, 'Dislike': -1}
-    not_found_games = []
-    
-    for gameName, gameReview in played_games_dict.items():
-        try:
-            review = gameReview.split(' ¬ ')[1]
-            review = review_numerical_value[review.split(': ')[1]]
-            
-            # Tìm game trong DataFrame
-            game_matches = df_all[df_all['title'] == gameName]
-            if game_matches.empty:
-                # Thử tìm không phân biệt hoa thường
-                game_matches = df_all[df_all['title'].str.lower() == gameName.lower()]
-            
-            if not game_matches.empty:
-                game_id = game_matches.iloc[0]['app_id']
-                played_data.append({'gameID': game_id, 'gameName': gameName, 'review': review})
-            else:
-                not_found_games.append(gameName)
-                print(f"Warning: Game '{gameName}' not found in games database. Skipping...")
-        except Exception as e:
-            print(f"Error processing game '{gameName}': {str(e)}")
-            not_found_games.append(gameName)
-    
-    if played_data:
+    try:
+        played_data = []
+        review_numerical_value = {'Like': 1, 'Interested': 0.5, 'Neutral/Not Interested': -0.5, 'Dislike': -1}
+        
+        for gameName, gameReview in played_games_dict.items():
+            # Extract review text safely
+            try:
+                review_text = gameReview.split('Review: ')[1]
+                review_val = review_numerical_value.get(review_text, 0)
+                
+                # Find ID
+                game_row = df_all[df_all['title'] == gameName]
+                if not game_row.empty:
+                    game_id = game_row['app_id'].values[0]
+                    played_data.append({'gameID': game_id, 'gameName': gameName, 'review': review_val})
+            except Exception as e:
+                print(f"Error processing {gameName}: {e}")
+                continue
+
         reviews_df = pd.DataFrame(played_data)
         reviews_df.to_csv(os.path.join(dir_path, "your_games.csv"), index=False)
-        print(f"Saved {len(played_data)} played games")
-    else:
-        print("No played games to save")
-    
-    fav_data = []
-    for gameName, gameInfo in fav_games_dict.items():
-        try:
-            # Tìm game trong DataFrame
-            game_matches = df_all[df_all['title'] == gameName]
-            if game_matches.empty:
-                # Thử tìm không phân biệt hoa thường
-                game_matches = df_all[df_all['title'].str.lower() == gameName.lower()]
-            
-            if not game_matches.empty:
-                game_id = game_matches.iloc[0]['app_id']
+
+        fav_data = []
+        for gameName in fav_games_dict.keys():
+            game_row = df_all[df_all['title'] == gameName]
+            if not game_row.empty:
+                game_id = game_row['app_id'].values[0]
                 fav_data.append({'gameID': game_id, 'gameName': gameName})
-            else:
-                if gameName not in not_found_games:
-                    not_found_games.append(gameName)
-                print(f"Warning: Game '{gameName}' not found in games database. Skipping...")
-        except Exception as e:
-            print(f"Error processing favorite game '{gameName}': {str(e)}")
-            if gameName not in not_found_games:
-                not_found_games.append(gameName)
-    
-    if fav_data:
-        fav_df = pd.DataFrame(fav_data)
+        
+        # Fix lỗi EmptyDataError bằng cách luôn tạo DataFrame có cột
+        fav_df = pd.DataFrame(fav_data, columns=['gameID', 'gameName'])
         fav_df.to_csv(os.path.join(dir_path, "fav_games.csv"), index=False)
-        print(f"Saved {len(fav_data)} favorite games")
-    else:
-        print("No favorite games to save")
-    
-    # Hiển thị message
-    if not_found_games:
-        msg = f'Saved games successfully!\n\n'
-        msg += f'Warning: {len(not_found_games)} game(s) not found in database:\n'
-        msg += '\n'.join(not_found_games[:5])  # Chỉ hiển thị 5 games đầu
-        if len(not_found_games) > 5:
-            msg += f'\n... and {len(not_found_games) - 5} more'
-        messagebox.showwarning('CSV Saved with Warnings', msg)
-    else:
-        messagebox.showinfo('CSV Saved', 'Played and favourite games saved successfully!')
+        
+        messagebox.showinfo('Success', 'Data saved successfully!')
+    except Exception as e:
+        messagebox.showerror('Error', f"Failed to save data: {e}")
 
 def get_recommendations(dir_path):
     try:
         notebook_path = os.path.join(dir_path, "knn_model.ipynb")
+        if not os.path.exists(notebook_path):
+            messagebox.showerror("Error", "knn_model.ipynb not found!")
+            return
 
         with open(notebook_path, 'r', encoding='utf-8') as f:
             nb = nbformat.read(f, as_version=4)
@@ -186,7 +157,7 @@ def get_recommendations(dir_path):
         ep = ExecutePreprocessor(timeout=6000, kernel_name='python3')
         ep.preprocess(nb, {'metadata': {'path': dir_path}})
 
-        messagebox.showinfo('Notebook Executed', 'Recommendations generated successfully.')
+        messagebox.showinfo('Success', 'Recommendations generated successfully.\nCheck rcm_games.csv')
 
     except Exception as e:
-        messagebox.showerror('Error', f'Failed to run recommendations notebook: {str(e)}')
+        messagebox.showerror('Error', f'Failed to run recommendations: {str(e)}')

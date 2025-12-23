@@ -1,158 +1,99 @@
-# Lý Thuyết Hybrid Recommendation System
+# Cơ Sở Lý Thuyết và Công Thức của Hybrid Model
 
 ## 1. Tổng Quan
+**Hybrid Recommendation System (Hệ thống Gợi ý Lai)** là phương pháp kết hợp sức mạnh của **Content-Based Filtering (CB)** và **Collaborative Filtering (KNN)**. Mục tiêu là tạo ra một danh sách gợi ý vừa đảm bảo tính **liên quan về nội dung** (đúng gu), vừa đảm bảo tính **hấp dẫn cộng đồng** (game hay, không phải game rác).
 
-Hệ thống **Hybrid Recommendation** kết hợp **KNN (Collaborative Filtering)** và **Content-Based Filtering** để tạo recommendations tốt nhất, vừa dựa trên trải nghiệm users (KNN) vừa dựa trên similarity về content (Genres/Tags).
+Trong dự án này, chúng ta sử dụng phương pháp **Weighted Ensemble** kết hợp với **Fuzzy Name Matching** để hợp nhất dữ liệu từ nhiều nguồn khác nhau.
 
-**Lưu ý:** Hybrid system chỉ **đọc recommendations** từ 2 models đã chạy, không tự động chạy models.
+---
 
-## 2. Nguyên Lý Hoạt Động
+## 2. Quy Trình Xử Lý & Công Thức
 
-### Quy Trình:
+### A. Đồng bộ dữ liệu (Fuzzy Name Matching)
+Do dữ liệu từ KNN và CB đến từ hai nguồn khác nhau, ID của game có thể không khớp. Hệ thống sử dụng kỹ thuật chuẩn hóa tên để ghép nối.
 
-1. **Đọc Recommendations**: Đọc top 30 recommendations từ cả KNN và Content-Based models
-2. **Scoring**: Gán điểm cho mỗi game dựa trên rank (rank #1 = 30 điểm, rank #30 = 1 điểm)
-3. **Weighting**: Áp dụng weights cho mỗi model (default: 0.5 cho mỗi)
-4. **Hybrid Scoring**: Tính hybrid score với improved ranking logic
-5. **Ranking**: Sort và lấy top N recommendations
+Hàm chuẩn hóa $f(name)$:
+$$ f(\text{name}) = \text{lowercase}(\text{remove\_special\_chars}(\text{name})) $$
 
-## 3. Scoring System
+*   **Ví dụ:**
+    *   CB: "The Witcher® 3: Wild Hunt" $\rightarrow$ `thewitcher3wildhunt`
+    *   KNN: "The Witcher 3: Wild Hunt" $\rightarrow$ `thewitcher3wildhunt`
+    *   $\Rightarrow$ **Khớp (Match)**.
 
-### KNN Scoring
-- Top 30 games từ KNN
-- Điểm: 30, 29, 28, ..., 3, 2, 1
-- Weighted: `knn_score * knn_weight` (default weight = 0.5)
+### B. Chuẩn hóa Điểm số (Score Normalization)
+Điểm số (Score) của KNN và CB có thang đo khác nhau (KNN có thể lên tới 200, CB chỉ max là 1). Cần đưa về khoảng $[0, 1]$.
 
-### Content-Based Scoring
-- Top 30 games từ Content-Based
-- Điểm: 30, 29, 28, ..., 3, 2, 1
-- Weighted: `cb_score * cb_weight` (default weight = 0.5)
+$$ S'_{KNN} = \frac{S_{KNN}}{\max(S_{KNN\_all})} $$
+$$ S'_{CB} = \frac{S_{CB}}{\max(S_{CB\_all})} $$
 
-## 4. Hybrid Ranking Logic
+### C. Tổng hợp cơ bản (Weighted Combination)
+Tính điểm trung bình cộng có trọng số giữa hai mô hình.
 
-### Mục Tiêu
-- **knn cao + cb cao** > **knn cao + cb thấp** > **knn thấp + cb cao** > **knn thấp + cb thấp**
-- **Nhưng**: Game có cả 2 scores (dù thấp) > Game chỉ có 1 score cao
+$$ \text{Base Score} = (S'_{KNN} \times W_{KNN}) + (S'_{CB} \times W_{CB}) $$
 
-### Công Thức
+**Trong code:**
+*   $W_{KNN} = 0.5$ (hoặc 0.6)
+*   $W_{CB} = 0.5$ (hoặc 0.4)
 
-#### Nếu có cả 2 scores (KNN > 0 và CB > 0):
-```
-base_score = knn_score + cb_score
-multiplicative_bonus = sqrt(knn_score * cb_score) * 0.5
-balance_bonus = min(knn_score, cb_score) * 0.2
-min_boost = 2.0
-hybrid_score = base_score + multiplicative_bonus + balance_bonus + min_boost
-```
+### D. Cơ chế Cộng hưởng (Synergy Boost) - *Quan Trọng*
+Đây là "bí thuật" giúp các siêu phẩm (Masterpiece) leo lên Top. Hệ thống thưởng điểm cho các game được **cả hai mô hình** cùng đề xuất.
 
-#### Nếu chỉ có 1 score (KNN=0 hoặc CB=0):
-```
-hybrid_score = base_score * 0.4  (Penalty 60%)
-```
+**Trường hợp 1: Game có sự đồng thuận (Giao thoa)**
+Nếu $S'_{KNN} > 0$ VÀ $S'_{CB} > 0$:
+$$ \text{Boost} = \sqrt{S'_{KNN} \times S'_{CB}} \times 0.5 $$
+$$ \text{Final Score} = \text{Base Score} + \text{Boost} $$
 
-### Ví Dụ
+*   *Giải thích:* Sử dụng trung bình nhân (Geometric Mean) để tạo ra sự cộng hưởng. Game phải tốt ở cả 2 mặt mới có Boost cao.
 
-#### Case 1: Cả 2 scores cao
-- KNN=15, CB=15
-- hybrid_score = 30 + sqrt(225)*0.5 + 15*0.2 + 2 = 30 + 7.5 + 3 + 2 = **42.5** ✅
+**Trường hợp 2: Game đơn lẻ (Chỉ xuất hiện 1 bên)**
+Nếu chỉ có $S'_{KNN} > 0$ HOẶC chỉ có $S'_{CB} > 0$:
+$$ \text{Final Score} = \text{Base Score} \times 0.8 $$
 
-#### Case 2: 1 cao, 1 thấp
-- KNN=15, CB=2.5
-- hybrid_score = 17.5 + sqrt(37.5)*0.5 + 2.5*0.2 + 2 = 17.5 + 3.06 + 0.5 + 2 = **23.06** ✅
+*   *Giải thích:* Áp dụng hình phạt (Penalty) 20% để ưu tiên những game có sự đồng thuận cao hơn.
 
-#### Case 3: Cả 2 scores thấp
-- KNN=0.5, CB=0.5
-- hybrid_score = 1 + sqrt(0.25)*0.5 + 0.5*0.2 + 2 = 1 + 0.25 + 0.1 + 2 = **3.35** ✅
+---
 
-#### Case 4: Chỉ có KNN (CB=0)
-- KNN=15, CB=0
-- hybrid_score = 15 * 0.4 = **6** ✅
+## 3. Ứng Dụng Thực Tiễn trong Code (Data Flow)
 
-#### Case 5: Chỉ có CB (KNN=0)
-- KNN=0, CB=5
-- hybrid_score = 5 * 0.4 = **2** ✅
+Dưới đây là quy trình xử lý dữ liệu thực tế khi bạn chạy file `run_hybrid.py`:
 
-## 5. Điểm Mạnh
+### Bước 1: Quét sâu (Deep Scan)
+*   **Vấn đề:** Nếu chỉ lấy Top 20 mỗi bên, khả năng trùng nhau rất thấp (Game A đứng thứ 5 bên KNN nhưng đứng thứ 50 bên CB sẽ bị loại).
+*   **Giải pháp:** Code đọc **Top 200** game từ mỗi file kết quả (`rcm_games.csv` và `cb_recommendations.csv`).
+*   **Tác dụng:** Mở rộng "vùng phủ sóng" để tìm kiếm tối đa các điểm giao thoa.
 
-1. ✅ **Cân bằng**: Kết hợp cả user behavior và content similarity
-2. ✅ **Đa dạng**: Games được recommend từ 2 góc độ khác nhau
-3. ✅ **Chính xác**: Games xuất hiện trong cả 2 lists có độ tin cậy cao
-4. ✅ **Linh hoạt**: Có thể điều chỉnh weights (KNN vs CB)
-5. ✅ **Improved ranking**: Games có cả 2 scores được ưu tiên
+### Bước 2: Ghép nối (Merging)
+*   Hệ thống tạo một bảng chung, sử dụng `normalized_title` làm khóa chính (Key).
+*   Nếu game bị thiếu AppID (do lỗi dữ liệu KNN), hệ thống tự động tra cứu lại trong `final_games.csv` để điền ID chuẩn vào.
 
-## 6. Cách Sử Dụng
+### Bước 3: Tính điểm & Xếp hạng (Scoring & Ranking)
+**Ví dụ thực tế:**
+1.  **Game "God of War":**
+    *   KNN (Cộng đồng): Rank 4 (Rất cao) $\rightarrow$ $S'_{KNN} \approx 0.9$.
+    *   CB (Nội dung): Rank 35 (Khá) $\rightarrow$ $S'_{CB} \approx 0.4$.
+    *   **Kết quả:** Có giao thoa $\rightarrow$ Được cộng thêm điểm Boost $\rightarrow$ Nhảy lên **Top 2 Hybrid**.
+2.  **Game "Euro Truck Simulator 2":**
+    *   KNN: Rank 9 (Cao - do game thủ chơi tạp) $\rightarrow$ $S'_{KNN} \approx 0.7$.
+    *   CB: Rank N/A (Thấp - do khác thể loại RPG) $\rightarrow$ $S'_{CB} = 0$.
+    *   **Kết quả:** Không có Boost, bị phạt 20% $\rightarrow$ Tụt xuống **Rank 20**.
 
-### Bước 1: Chạy KNN Model
-```bash
-cd KNN_model
-python UI.py
-```
-1. Rate games (nếu chưa có)
-2. Click "Get Recommendations"
-3. Đảm bảo file `rcm_games.csv` hoặc `recommendations.csv` được tạo
+### Bước 4: Xuất kết quả
+*   Tạo file `hybrid_ranking.csv`.
+*   Hiển thị giao diện UI với mã màu:
+    *   **Xanh lá:** Game được cả 2 mô hình đề xuất (Highly Recommended).
+    *   **Trắng:** Game chỉ do 1 mô hình đề xuất.
 
-### Bước 2: Chạy Content-Based Model
-```bash
-cd CB_model
-python UI_ContentBased.py
-```
-1. Rate games (nếu chưa có)
-2. Train model (nếu chưa train)
-3. Click "Get Recommendations"
-4. Đảm bảo file `cb_recommendations.csv` được tạo
+---
 
-### Bước 3: Chạy Hybrid Ranking
-```bash
-cd Hybrid_model
-run_Hybrid.bat
-```
-hoặc
-```bash
-cd Hybrid_model
-python run_hybrid.py
-```
+## 4. Đánh Giá Mô Hình
 
-### Kết Quả
-- Hybrid rankings được lưu vào `hybrid_ranking.csv`
-- UI window tự động mở hiển thị kết quả trong bảng
-- Top 3 games: highlight xanh lá
-- Top 10 games: highlight xanh dương
-- Games có cả 2 scores: chữ xanh
+### Ưu Điểm
+1.  **Độ chính xác vượt trội:** Khắc phục điểm yếu của từng mô hình đơn lẻ.
+2.  **Giải quyết vấn đề "Lệch pha":** KNN có thể gợi ý game "lạc quẻ", CB có thể gợi ý game "rác". Hybrid dùng cái này để kiểm chứng cái kia.
+3.  **Linh hoạt:** Có thể điều chỉnh trọng số ($W_{KNN}, W_{CB}$) để ưu tiên theo xu hướng cộng đồng hoặc theo nội dung thuần túy.
+4.  **Robust (Bền vững):** Nhờ cơ chế Name Matching, hệ thống vẫn chạy tốt ngay cả khi ID game bị lỗi hoặc dữ liệu không đồng nhất.
 
-## 7. Files Liên Quan
-
-- `Hybrid_model/run_hybrid.py`: Main script
-- `Hybrid_model/Hybrid_recommendations_reader.py`: Core logic
-- `Hybrid_model/Hybrid_results_viewer.py`: UI viewer
-- `Hybrid_model/run_Hybrid.bat`: Batch file
-
-## 8. Data Files
-
-- `KNN_model/rcm_games.csv` hoặc `recommendations.csv`: KNN recommendations
-- `CB_model/cb_recommendations.csv`: Content-Based recommendations
-- `Hybrid_model/hybrid_ranking.csv`: Hybrid rankings output
-
-## 9. Lưu Ý
-
-1. **Phải chạy models trước**: Hybrid system chỉ đọc recommendations, không tự chạy models
-2. **File requirements**: Cần cả 2 recommendations files
-3. **AppID mapping**: Cần đảm bảo AppID giữa 2 systems tương thích
-4. **Weights**: Có thể điều chỉnh `knn_weight` và `cb_weight` trong `run_hybrid.py`
-
-## 10. Troubleshooting
-
-### Lỗi: "KNN recommendations not found"
-- Chạy KNN model trước và get recommendations
-
-### Lỗi: "Content-Based recommendations not found"
-- Chạy Content-Based model trước và get recommendations
-
-### Lỗi: "No hybrid rankings calculated"
-- Kiểm tra cả 2 recommendations files có data không
-
-### Recommendations không đa dạng
-- Rate games đa dạng trong cả 2 systems
-- Rate cả games thích và không thích để KNN hoạt động tốt hơn
-
-Xem `HYBRID_RANKING_LOGIC.md` để biết chi tiết về ranking logic.
-
+### Nhược Điểm
+1.  **Chi phí tính toán:** Phải chạy cả 2 mô hình con trước khi chạy Hybrid.
+2.  **Độ phức tạp:** Code xử lý ghép nối dữ liệu (Merge) phức tạp hơn.
+3.  **Phụ thuộc dữ liệu:** Cần cả dữ liệu Rating của người dùng và Metadata của game để hoạt động tối ưu.

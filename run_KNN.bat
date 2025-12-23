@@ -1,5 +1,7 @@
 @echo off
-echo Starting KNN Recommendation System...
+echo ========================================
+echo KNN Collaborative Filtering System
+echo ========================================
 cd KNN_model
 python UI.py
 cd ..

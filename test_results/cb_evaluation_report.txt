@@ -1,0 +1,20 @@
+
+    ==================================================
+    KẾT QUẢ ĐÁNH GIÁ MODEL (EVALUATION REPORT)
+    ==================================================
+    Thời gian chạy: 2025-12-24 12:12:00
+    Dataset Size: 17234 games
+    Test Set Size: 3446 games (20%)
+    Recommendations per game: 10
+    --------------------------------------------------
+    1. Genre Match Score : 93.12%
+       (Tỷ lệ game được gợi ý đúng thể loại chính)
+       
+    2. Tag Consistency   : 31.35%
+       (Độ trùng khớp về nhãn dán - Jaccard Index)
+    --------------------------------------------------
+    NHẬN XÉT:
+    - Genre > 70%: Model phân loại tốt.
+    - Tag > 40%: Model hiểu được ngữ cảnh nội dung.
+    ==================================================
+    

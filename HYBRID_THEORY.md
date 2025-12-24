@@ -1,99 +1,83 @@
-# Cơ Sở Lý Thuyết và Công Thức của Hybrid Model
+# CHƯƠNG 3: CƠ SỞ LÝ THUYẾT MÔ HÌNH HYBRID (HYBRID RECOMMENDATION MODEL)
 
-## 1. Tổng Quan
-**Hybrid Recommendation System (Hệ thống Gợi ý Lai)** là phương pháp kết hợp sức mạnh của **Content-Based Filtering (CB)** và **Collaborative Filtering (KNN)**. Mục tiêu là tạo ra một danh sách gợi ý vừa đảm bảo tính **liên quan về nội dung** (đúng gu), vừa đảm bảo tính **hấp dẫn cộng đồng** (game hay, không phải game rác).
+## 3.1. Tổng Quan Phương Pháp
+Hệ thống sử dụng kiến trúc **Weighted Hybrid (Lai ghép có trọng số)** kết hợp với chiến lược **Synergy Re-ranking (Tái xếp hạng dựa trên sự cộng hưởng)**.
 
-Trong dự án này, chúng ta sử dụng phương pháp **Weighted Ensemble** kết hợp với **Fuzzy Name Matching** để hợp nhất dữ liệu từ nhiều nguồn khác nhau.
+Thay vì chỉ gộp kết quả một cách đơn thuần, hệ thống hoạt động như một "bộ lọc thông minh" (Smart Filter) nhằm giải quyết hai vấn đề cốt lõi của các hệ thống gợi ý đơn lẻ:
+1.  **Vấn đề của Content-Based:** Sự lặp lại nhàm chán (Over-specialization) và thiếu tính khám phá.
+2.  **Vấn đề của Collaborative Filtering (KNN):** Thiên kiến phổ biến (Popularity Bias) và nhiễu dữ liệu.
+
+Mô hình Hybrid sẽ tìm kiếm sự **"Đồng thuận" (Consensus)** giữa nội dung game và hành vi cộng đồng để đưa ra những gợi ý có độ tin cậy cao nhất.
 
 ---
 
-## 2. Quy Trình Xử Lý & Công Thức
+## 3.2. Quy Trình Xử Lý Toán Học
 
-### A. Đồng bộ dữ liệu (Fuzzy Name Matching)
-Do dữ liệu từ KNN và CB đến từ hai nguồn khác nhau, ID của game có thể không khớp. Hệ thống sử dụng kỹ thuật chuẩn hóa tên để ghép nối.
+Quá trình tính toán điểm số Hybrid trải qua 3 bước xử lý chính:
 
-Hàm chuẩn hóa $f(name)$:
-$$ f(\text{name}) = \text{lowercase}(\text{remove\_special\_chars}(\text{name})) $$
+### Bước 1: Đồng bộ và Chuẩn hóa Dữ liệu (Normalization)
 
-*   **Ví dụ:**
-    *   CB: "The Witcher® 3: Wild Hunt" $\rightarrow$ `thewitcher3wildhunt`
-    *   KNN: "The Witcher 3: Wild Hunt" $\rightarrow$ `thewitcher3wildhunt`
-    *   $\Rightarrow$ **Khớp (Match)**.
+Do dữ liệu đầu vào đến từ hai không gian vector khác nhau (KNN dùng ma trận thưa User-Item, CB dùng ma trận đặc Metadata), hệ thống cần thực hiện hai phép chuẩn hóa:
 
-### B. Chuẩn hóa Điểm số (Score Normalization)
-Điểm số (Score) của KNN và CB có thang đo khác nhau (KNN có thể lên tới 200, CB chỉ max là 1). Cần đưa về khoảng $[0, 1]$.
+**a. Chuẩn hóa Định danh (Identity Normalization):**
+Sử dụng kỹ thuật **Fuzzy Name Matching** để khớp nối các game khi ID không đồng nhất hoặc bị thiếu.
+$$ f(\text{name}) = \text{lowercase}(\text{regex\_remove\_special\_chars}(\text{name})) $$
+*(Ví dụ: "The Witcher® 3: Wild Hunt" và "the witcher 3" sẽ được xử lý thành cùng một key: `thewitcher3wildhunt`).*
+
+**b. Chuẩn hóa Điểm số (Score Scaling):**
+Đưa điểm số của KNN (Distance-based score) và CB (Cosine Similarity) về cùng một hệ quy chiếu $[0, 1]$ để thực hiện phép cộng đại số.
 
 $$ S'_{KNN} = \frac{S_{KNN}}{\max(S_{KNN\_all})} $$
 $$ S'_{CB} = \frac{S_{CB}}{\max(S_{CB\_all})} $$
 
-### C. Tổng hợp cơ bản (Weighted Combination)
-Tính điểm trung bình cộng có trọng số giữa hai mô hình.
+---
 
-$$ \text{Base Score} = (S'_{KNN} \times W_{KNN}) + (S'_{CB} \times W_{CB}) $$
+### Bước 2: Tính Điểm Nền Tảng (Base Score Calculation)
 
-**Trong code:**
-*   $W_{KNN} = 0.5$ (hoặc 0.6)
-*   $W_{CB} = 0.5$ (hoặc 0.4)
+Điểm nền tảng được tính bằng tổ hợp tuyến tính (Linear Combination) giữa hai thành phần, cho phép điều chỉnh trọng số ($W$) linh hoạt tùy theo kịch bản kiểm thử.
 
-### D. Cơ chế Cộng hưởng (Synergy Boost) - *Quan Trọng*
-Đây là "bí thuật" giúp các siêu phẩm (Masterpiece) leo lên Top. Hệ thống thưởng điểm cho các game được **cả hai mô hình** cùng đề xuất.
+$$ \text{Base Score} = (W_{KNN} \times S'_{KNN}) + (W_{CB} \times S'_{CB}) $$
 
-**Trường hợp 1: Game có sự đồng thuận (Giao thoa)**
-Nếu $S'_{KNN} > 0$ VÀ $S'_{CB} > 0$:
+*Trong đó:* $W_{KNN} + W_{CB} = 1$.
+
+---
+
+### Bước 3: Cơ Chế Cộng Hưởng (Synergy Boost Strategy) - *Trọng tâm*
+
+Đây là đóng góp chính của thuật toán Hybrid trong đồ án này. Thay vì chỉ cộng điểm, hệ thống áp dụng cơ chế thưởng/phạt dựa trên sự **Giao thoa (Overlap)** của tập dữ liệu.
+
+**Trường hợp A: Sự Đồng thuận (Consensus Case)**
+Khi một tựa game xuất hiện trong danh sách gợi ý của **cả hai thuật toán** ($S'_{KNN} > 0$ và $S'_{CB} > 0$):
+*   Hệ thống xác định đây là một "Strong Recommendation" (Gợi ý mạnh).
+*   Áp dụng điểm thưởng **Synergy Boost** dựa trên trung bình nhân (Geometric Mean approximation):
+
 $$ \text{Boost} = \sqrt{S'_{KNN} \times S'_{CB}} \times 0.5 $$
 $$ \text{Final Score} = \text{Base Score} + \text{Boost} $$
 
-*   *Giải thích:* Sử dụng trung bình nhân (Geometric Mean) để tạo ra sự cộng hưởng. Game phải tốt ở cả 2 mặt mới có Boost cao.
+*Ý nghĩa:* Cơ chế này đảm bảo những game vừa có nội dung phù hợp, vừa được cộng đồng đánh giá cao sẽ luôn được đẩy lên vị trí Top đầu (như kết quả thực nghiệm với *Thronebreaker* hay *God of War*).
 
-**Trường hợp 2: Game đơn lẻ (Chỉ xuất hiện 1 bên)**
-Nếu chỉ có $S'_{KNN} > 0$ HOẶC chỉ có $S'_{CB} > 0$:
+**Trường hợp B: Gợi ý Đơn lẻ (Isolated Case)**
+Khi một tựa game chỉ được gợi ý bởi một phía (chỉ KNN hoặc chỉ CB):
+*   Hệ thống áp dụng **Hình phạt (Penalty)** để giảm độ ưu tiên.
+
 $$ \text{Final Score} = \text{Base Score} \times 0.8 $$
 
-*   *Giải thích:* Áp dụng hình phạt (Penalty) 20% để ưu tiên những game có sự đồng thuận cao hơn.
+*Ý nghĩa:* Giúp lọc bớt các game "rác" (KNN gợi ý bừa do game quá phổ biến) hoặc các game quá "ngách" (CB gợi ý nhưng cộng đồng không chơi).
 
 ---
 
-## 3. Ứng Dụng Thực Tiễn trong Code (Data Flow)
+## 3.3. Thiết Kế Luồng Dữ Liệu (Data Flow Design)
 
-Dưới đây là quy trình xử lý dữ liệu thực tế khi bạn chạy file `run_hybrid.py`:
+Hệ thống được thiết kế với kiến trúc **"Deep Scan & Merge"** (Quét sâu và Hợp nhất):
 
-### Bước 1: Quét sâu (Deep Scan)
-*   **Vấn đề:** Nếu chỉ lấy Top 20 mỗi bên, khả năng trùng nhau rất thấp (Game A đứng thứ 5 bên KNN nhưng đứng thứ 50 bên CB sẽ bị loại).
-*   **Giải pháp:** Code đọc **Top 200** game từ mỗi file kết quả (`rcm_games.csv` và `cb_recommendations.csv`).
-*   **Tác dụng:** Mở rộng "vùng phủ sóng" để tìm kiếm tối đa các điểm giao thoa.
+1.  **Deep Scan Input (Quét sâu đầu vào):**
+    *   Thay vì chỉ lấy Top 10 game từ mỗi mô hình con (dễ dẫn đến việc không có game nào trùng nhau), hệ thống đọc **Top 200** ứng viên tiềm năng nhất từ KNN và CB.
+    *   Điều này mở rộng không gian tìm kiếm, tăng xác suất tìm thấy các điểm giao thoa (Overlap).
 
-### Bước 2: Ghép nối (Merging)
-*   Hệ thống tạo một bảng chung, sử dụng `normalized_title` làm khóa chính (Key).
-*   Nếu game bị thiếu AppID (do lỗi dữ liệu KNN), hệ thống tự động tra cứu lại trong `final_games.csv` để điền ID chuẩn vào.
+2.  **Cơ chế Chịu lỗi (Fault Tolerance - ID Recovery):**
+    *   Trong quá trình vận hành thực tế, dữ liệu từ Collaborative Filtering thường gặp lỗi thiếu Metadata (ví dụ: chỉ có tên game, mất AppID).
+    *   Module Hybrid tích hợp cơ chế **ID Recovery**: Tự động tra cứu ngược vào cơ sở dữ liệu gốc (`final_games.csv`) để khôi phục AppID dựa trên tên game đã chuẩn hóa, đảm bảo tính toàn vẹn của dữ liệu đầu ra.
 
-### Bước 3: Tính điểm & Xếp hạng (Scoring & Ranking)
-**Ví dụ thực tế:**
-1.  **Game "God of War":**
-    *   KNN (Cộng đồng): Rank 4 (Rất cao) $\rightarrow$ $S'_{KNN} \approx 0.9$.
-    *   CB (Nội dung): Rank 35 (Khá) $\rightarrow$ $S'_{CB} \approx 0.4$.
-    *   **Kết quả:** Có giao thoa $\rightarrow$ Được cộng thêm điểm Boost $\rightarrow$ Nhảy lên **Top 2 Hybrid**.
-2.  **Game "Euro Truck Simulator 2":**
-    *   KNN: Rank 9 (Cao - do game thủ chơi tạp) $\rightarrow$ $S'_{KNN} \approx 0.7$.
-    *   CB: Rank N/A (Thấp - do khác thể loại RPG) $\rightarrow$ $S'_{CB} = 0$.
-    *   **Kết quả:** Không có Boost, bị phạt 20% $\rightarrow$ Tụt xuống **Rank 20**.
-
-### Bước 4: Xuất kết quả
-*   Tạo file `hybrid_ranking.csv`.
-*   Hiển thị giao diện UI với mã màu:
-    *   **Xanh lá:** Game được cả 2 mô hình đề xuất (Highly Recommended).
-    *   **Trắng:** Game chỉ do 1 mô hình đề xuất.
-
----
-
-## 4. Đánh Giá Mô Hình
-
-### Ưu Điểm
-1.  **Độ chính xác vượt trội:** Khắc phục điểm yếu của từng mô hình đơn lẻ.
-2.  **Giải quyết vấn đề "Lệch pha":** KNN có thể gợi ý game "lạc quẻ", CB có thể gợi ý game "rác". Hybrid dùng cái này để kiểm chứng cái kia.
-3.  **Linh hoạt:** Có thể điều chỉnh trọng số ($W_{KNN}, W_{CB}$) để ưu tiên theo xu hướng cộng đồng hoặc theo nội dung thuần túy.
-4.  **Robust (Bền vững):** Nhờ cơ chế Name Matching, hệ thống vẫn chạy tốt ngay cả khi ID game bị lỗi hoặc dữ liệu không đồng nhất.
-
-### Nhược Điểm
-1.  **Chi phí tính toán:** Phải chạy cả 2 mô hình con trước khi chạy Hybrid.
-2.  **Độ phức tạp:** Code xử lý ghép nối dữ liệu (Merge) phức tạp hơn.
-3.  **Phụ thuộc dữ liệu:** Cần cả dữ liệu Rating của người dùng và Metadata của game để hoạt động tối ưu.
+3.  **Ranking & Output:**
+    *   Danh sách sau khi tính điểm `Final Score` sẽ được sắp xếp giảm dần.
+    *   Chỉ lấy **Top N** (ví dụ: Top 50 hoặc Top 100) kết quả tốt nhất để hiển thị cho người dùng, đảm bảo hiệu năng và trải nghiệm người dùng tối ưu.

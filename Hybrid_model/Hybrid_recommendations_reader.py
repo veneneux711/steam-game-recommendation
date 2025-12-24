@@ -184,10 +184,10 @@ def save_hybrid_ranking(df, path):
     try:
         df.to_csv(path, index=False)
         print(f"Saved to {path}")
-        return True  # <--- THÊM DÒNG NÀY (Bắt buộc)
+        return True  
     except Exception as e:
         print(f"Error saving: {e}")
-        return False # <--- THÊM DÒNG NÀY (Bắt buộc)
+        return False 
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -195,8 +195,13 @@ if __name__ == "__main__":
     knn_dir = os.path.join(project_root, "KNN_model")
     cb_dir = os.path.join(project_root, "CB_model")
     
-    hybrid_ranking = calculate_hybrid_ranking(knn_dir, cb_dir, top_n=50)
-    
+    hybrid_ranking = calculate_hybrid_ranking(
+        knn_dir, 
+        cb_dir, 
+        top_n=100,       # <--- Sửa từ 50 lên 100 (Lấy nhiều hơn để KNN lọt vào)
+        knn_weight=0.7,  # <--- Tăng trọng số KNN (Để đẩy điểm KNN lên)
+        cb_weight=0.3    # <--- Giảm trọng số CB
+    )
     if not hybrid_ranking.empty:
         results_dir = os.path.join(project_root, "results")
         os.makedirs(results_dir, exist_ok=True)

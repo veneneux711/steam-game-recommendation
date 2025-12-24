@@ -1,90 +1,105 @@
-# Hướng Dẫn Kiểm Thử & Đánh Giá Hệ Thống (Testing Guide)
+# HƯỚNG DẪN KIỂM THỬ & ĐÁNH GIÁ HỆ THỐNG (BENCHMARKING GUIDE)
 
-Tài liệu này hướng dẫn quy trình **Benchmark** (Đánh giá hiệu năng) của hệ thống gợi ý game Steam. Thay vì kiểm tra thủ công từng người, chúng ta sử dụng tập dữ liệu **50 người dùng ảo (Synthetic Users)** với các hồ sơ sở thích khác nhau để đo lường độ chính xác và tính ổn định của thuật toán.
+Tài liệu này hướng dẫn quy trình **Benchmark** (Đánh giá hiệu năng) của hệ thống gợi ý game Steam. Quy trình được chia thành 3 giai đoạn kiểm thử độc lập cho từng mô hình và tổng hợp kết quả bằng Dashboard trực quan.
 
 ---
 
-## 1. Cấu Trúc Kiểm Thử
+## 1. Cấu Trúc Thư Mục Kiểm Thử
 
-Quy trình gồm 3 bước tự động hóa:
-1.  **Generate Data:** Tạo ra 50 người dùng với các "Persona" (Kiểu người chơi) cụ thể (VD: Fan RPG, Fan FPS, Người chơi ngẫu nhiên...).
-2.  **Run Benchmark:** Hệ thống tự động nạp dữ liệu của từng người dùng ảo vào KNN và Content-Based, sau đó chạy Hybrid Model để lấy kết quả.
-3.  **Visualization:** Vẽ biểu đồ phân tích từ kết quả thu được.
+Đảm bảo các file script nằm trong thư mục `test_scripts/` và cấu trúc dự án như sau:
+
+```
+STEAM ML/
+├── CB_model/               # Chứa dữ liệu & model Content-Based
+├── KNN_model/              # Chứa dữ liệu & model Collaborative
+├── Hybrid_model/           # Chứa logic kết hợp
+├── results/                # Nơi chứa file kết quả chạy Hybrid (hybrid_ranking.csv)
+├── test_results/           # (Tự động tạo) Nơi lưu báo cáo text và ảnh biểu đồ
+└── test_scripts/
+    ├── test_cb_model.py           # Test độ chính xác nội dung
+    ├── test_knn_model.py          # Test độ chính xác hành vi
+    ├── test_hybrid_model.py       # Phân tích độ nhạy Hybrid
+    └── visualize_final_report.py  # Vẽ biểu đồ tổng hợp
+```
 
 ---
 
 ## 2. Chuẩn Bị Môi Trường
 
-Trước khi chạy test, đảm bảo bạn đã cài đặt đủ thư viện và Model đã được Train:
+Mở Terminal (Command Prompt) và cài đặt các thư viện cần thiết:
+```bash
+pip install pandas numpy matplotlib scipy scikit-learn
+```
 
-1.  Cài đặt thư viện vẽ biểu đồ:
-    ```bash
-    pip install matplotlib seaborn pandas
-    ```
-2.  Đảm bảo file `cb_model.pkl` đã tồn tại trong thư mục `CB_model` (Nếu chưa, hãy chạy `run_CB.bat` -> Train Model).
-
----
-
-## 3. Quy Trình Thực Hiện
-
-Mở Terminal (Command Prompt) và di chuyển vào thư mục chứa script test (ví dụ `test_scripts`):
+Di chuyển vào thư mục script trước khi chạy:
 ```bash
 cd test_scripts
 ```
 
-### Bước 1: Tạo Dữ Liệu Giả Lập
-Chạy script để sinh ra dữ liệu hành vi của 50 người dùng ảo.
-```bash
-python generate_synthetic_users.py
-```
-*   **Output:** Tạo thư mục `synthetic_data/` chứa 50 folder con (Mỗi folder là một user với file `your_games.csv` và `cb_user_ratings.json` tương ứng).
-*   **Mục đích:** Giả lập các tình huống người dùng thực tế (Người thích hành động, người thích chiến thuật...).
+---
 
-### Bước 2: Chạy Benchmark (Tự động hóa)
-Script này sẽ lần lượt đóng vai 50 user, nạp dữ liệu vào hệ thống và ghi lại game Top 1 được gợi ý.
-```bash
-python run_benchmark.py
-```
-*   **Thời gian chạy:** Khoảng 1-3 phút.
-*   **Output:** File `benchmark_report.csv` chứa bảng kết quả chi tiết (User nào -> Gợi ý game gì -> Điểm số bao nhiêu).
-*   **Lưu ý:** Script sẽ tự động import các model từ thư mục cha, bạn không cần copy file đi đâu cả.
+## 3. Quy Trình Thực Hiện (4 Bước)
 
-### Bước 3: Trực Quan Hóa Kết Quả
-Biến file CSV thành các biểu đồ đánh giá.
-```bash
-python visualize_results.py
-```
-*   **Output:**
-    *   Hiển thị cửa sổ chứa 4 biểu đồ phân tích.
-    *   Lưu ảnh biểu đồ vào file `benchmark_analysis.png`.
+### Bước 1: Đánh Giá Content-Based Model
+Kiểm tra khả năng phân loại game dựa trên nội dung (Genre, Tags).
+*   **Lệnh chạy:**
+    ```bash
+    python test_cb_model.py
+    ```
+*   **Dữ liệu:** Test trên 20% toàn bộ dataset (~3,400 games).
+*   **Chỉ số quan trọng:**
+    *   **Genre Match Score:** Tỷ lệ game gợi ý đúng thể loại chính (Kỳ vọng > 80%).
+    *   **Tag Consistency:** Độ trùng khớp về thẻ (Kỳ vọng > 30-40%).
+
+### Bước 2: Đánh Giá KNN Model (Collaborative Filtering)
+Kiểm tra khả năng dự đoán hành vi người dùng dựa trên lịch sử chơi.
+*   **Lệnh chạy:**
+    ```bash
+    python test_knn_model.py
+    ```
+*   **Cấu hình tối ưu:** Top-10 gợi ý, User có > 50 reviews.
+*   **Chỉ số quan trọng:**
+    *   **Precision@10:** Độ chính xác trong 10 gợi ý đầu (Kỳ vọng > 10%).
+    *   **Recall@10:** Khả năng tìm lại các game yêu thích đã bị ẩn (Kỳ vọng > 10%).
+
+### Bước 3: Phân Tích Hybrid Model
+Kiểm tra cơ chế kết hợp và độ ổn định của hệ thống lai.
+*   **Điều kiện:** Cần chạy `run_hybrid_system.py` ở thư mục gốc trước để tạo ra file `results/hybrid_ranking.csv` (nếu chưa có).
+*   **Lệnh chạy:**
+    ```bash
+    python test_hybrid_model.py
+    ```
+*   **Mục tiêu:**
+    *   **Sensitivity Analysis:** Kiểm tra xem Top 3 game thay đổi thế nào khi chỉnh trọng số.
+    *   **Synergy Boost:** Xác nhận các game "Đồng thuận" (xuất hiện ở cả 2 model) có được đẩy lên đầu không.
+
+### Bước 4: Tạo Báo Cáo Trực Quan (Dashboard)
+Tổng hợp toàn bộ số liệu thành biểu đồ chuyên nghiệp.
+*   **Lệnh chạy:**
+    ```bash
+    python visualize_final_report.py
+    ```
+*   **Output:** File ảnh chất lượng cao `test_results/final_dashboard_professional.png`.
 
 ---
 
-## 4. Cách Đọc Biểu Đồ & Phân Tích
+## 4. Hướng Dẫn Đọc Biểu Đồ (Dashboard Analysis)
 
-Khi bảo vệ đồ án, bạn sử dụng các biểu đồ này để giải thích:
+Sử dụng ảnh `final_dashboard_professional.png` để đưa vào báo cáo.
 
-### A. Scatter Plot: KNN vs Content-Based
-*   **Trục X:** Điểm số từ KNN (Cộng đồng).
-*   **Trục Y:** Điểm số từ Content-Based (Nội dung).
-*   **Phân tích:**
-    *   Các điểm nằm ở **góc trên bên phải**: Game được cả 2 mô hình đánh giá cao $\rightarrow$ Gợi ý chất lượng nhất (Hybrid hiệu quả).
-    *   Các điểm nằm sát trục: Game chỉ mạnh về một yếu tố (Trend hoặc Nội dung).
+### Biểu đồ A: Content-Based Performance (Cột Xanh)
+*   Thể hiện độ an toàn của hệ thống.
+*   **Genre Match cao (93%)** $\rightarrow$ Hệ thống không bao giờ gợi ý sai lệch thể loại (Ví dụ: Không gợi ý game thời trang cho người thích game bắn súng).
 
-### B. Bar Chart: Điểm số trung bình theo nhóm (Persona)
-*   Biểu đồ này cho biết hệ thống gợi ý tốt nhất cho đối tượng nào.
-*   **Kỳ vọng:** Nhóm "RPG_Fan" hoặc "FPS_Fan" nên có điểm cao hơn nhóm "Random_Player" (vì người chơi ngẫu nhiên rất khó đoán).
+### Biểu đồ B: KNN Performance (Cột Cam/Vàng)
+*   Thể hiện độ thông minh trong việc đoán ý người dùng.
+*   **Precision (15.45%):** Trong 10 game gợi ý, có khoảng 1-2 game chắc chắn user sẽ thích.
+*   **Recall (10.66%):** Tỷ lệ bao phủ, tìm lại được các game cũ.
+*   *Lưu ý:* Precision thấp là bình thường với không gian dữ liệu lớn như Steam.
 
-### C. Top Games (Biểu đồ tần suất)
-*   Thống kê những game nào xuất hiện nhiều nhất ở vị trí Top 1.
-*   **Phân tích:**
-    *   Nếu biểu đồ đa dạng (nhiều game khác nhau): Hệ thống có tính **Cá nhân hóa (Personalization)** tốt.
-    *   Nếu chỉ có 1-2 cột cao vút (VD: Ai cũng được gợi ý *CS:GO*): Hệ thống bị lỗi **Thiên kiến phổ biến (Popularity Bias)**.
+### Biểu đồ C: Hybrid Composition (Biểu đồ Tròn)
+*   Phân tích nguồn gốc của các game trong Top Ranking.
+*   **Màu Tím (Đồng thuận - Consensus):** Đây là vùng quan trọng nhất. Nếu miếng này xuất hiện, chứng tỏ thuật toán Hybrid hoạt động hiệu quả, lọc ra được những "siêu phẩm" vừa đúng gu (Content) vừa hay (KNN).
+*   **Màu Xanh/Cam:** Thể hiện sự đa dạng hóa nguồn gợi ý.
 
 ---
-
-## 5. Dọn Dẹp Sau Khi Test
-Sau khi chạy test xong, hệ thống của bạn đang lưu dữ liệu của user ảo cuối cùng (User 50). Để quay lại sử dụng bình thường:
-1.  Chạy `run_KNN.bat` $\rightarrow$ Xóa các game trong danh sách "Played".
-2.  Chạy `run_CB.bat` $\rightarrow$ Bấm "Clear All Ratings".
-3.  Nhập lại dữ liệu thật của bạn.

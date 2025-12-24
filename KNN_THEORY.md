@@ -1,103 +1,94 @@
-# Cơ Sở Lý Thuyết và Công Thức của KNN Model
+# CHƯƠNG 1: MÔ HÌNH COLLABORATIVE FILTERING (KNN)
 
-## 1. Tổng Quan
-**K-Nearest Neighbors (KNN)** trong hệ thống này là thuật toán **User-Based Collaborative Filtering (Lọc cộng tác dựa trên người dùng)**. Hệ thống không quan tâm game đó là thể loại gì, nó chỉ quan tâm: *"Những người chơi có gu giống bạn (Hàng xóm) đang chơi game gì khác? Nếu họ thích, khả năng cao bạn cũng sẽ thích."*
+## 1.1. Tổng Quan Phương Pháp
+Mô hình sử dụng thuật toán **User-Based Collaborative Filtering** với hướng tiếp cận bộ nhớ (Memory-based). Thay vì học các tham số mô hình phức tạp (như Matrix Factorization), hệ thống tính toán trực tiếp sự tương đồng giữa người dùng hiện tại và cộng đồng người chơi (Neighbors) để đưa ra dự đoán.
 
----
-
-## 2. Quy Trình Xử Lý & Công Thức
-
-### A. Ma trận Người dùng - Sản phẩm (User-Item Matrix)
-Dữ liệu được biểu diễn dưới dạng **Sparse Matrix (Ma trận thưa)** để tiết kiệm bộ nhớ, vì một người dùng chỉ chơi một phần rất nhỏ trong tổng số game trên Steam.
-
-Vector đánh giá của người dùng $u$ được định nghĩa:
-$$ \vec{v}_u = [r_{u,1}, r_{u,2}, ..., r_{u,n}] $$
-
-**Trong đó:**
-*   $r_{u,i} = 1$: Người dùng thích (Like/Interested).
-*   $r_{u,i} = -1$: Người dùng không thích (Dislike).
-*   $r_{u,i} = 0$: Chưa tương tác.
-
-### B. Bộ Lọc Hàng Xóm (Neighbor Selection Threshold)
-Trước khi tính toán, hệ thống lọc bớt những người dùng không liên quan để giảm nhiễu.
-
-$$ \text{Threshold} = \max(1, \lfloor N_{games} \times 0.7 \rfloor) $$
-
-*   $N_{games}$: Tổng số game bạn đã chơi.
-*   **Điều kiện:** Chỉ những user đã chơi trùng ít nhất 70% số game trong danh sách của bạn mới được đưa vào tập tính toán.
-
-### C. Đo độ tương đồng (Cosine Distance)
-Sử dụng khoảng cách Cosine để xác định ai là người có "gu" giống bạn nhất.
-
-$$ \text{Dist}(u, v) = 1 - \cos(\vec{u}, \vec{v}) = 1 - \frac{\vec{u} \cdot \vec{v}}{||\vec{u}|| \times ||\vec{v}||} $$
-
-*   $\text{Dist} \approx 0$: Hai người cực kỳ giống nhau (Soulmate).
-*   $\text{Dist} \approx 1$: Không có điểm chung.
-*   $\text{Dist} \approx 2$: Sở thích đối lập hoàn toàn.
-
-### D. Trọng số Nâng cao (Advanced Weighting)
-Ngoài khoảng cách, hệ thống áp dụng cơ chế thưởng điểm cho những người dùng thích các **Game Yêu Thích (Fav Games)** của bạn.
-
-Trọng số cơ bản cho người dùng $v$:
-$$ W_v = \frac{1}{10^{\sqrt{|\text{Fav}|}}} $$
-
-**Cập nhật trọng số:**
-Với mỗi game $g$ trong danh sách `Fav_Games` của bạn:
-*   Nếu người dùng $v$ cũng thích $g$: $W_v = W_v \times 4$
-*   Nếu người dùng $v$ ghét $g$: $W_v = W_v \times 0.5$ (hoặc loại bỏ).
-
-### E. Tổng hợp ý kiến (Aggregation)
-Dự đoán điểm số cho một game mới ($g$) dựa trên ý kiến của $K$ hàng xóm gần nhất.
-
-$$ \text{Score}(g) = \sum_{v \in \text{Neighbors}} \left( \vec{v}_g \times \frac{W_v}{\text{Dist}(u, v) + \epsilon} \right) $$
-
-**Trong đó:**
-*   $\vec{v}_g$: Đánh giá của hàng xóm $v$ về game $g$ (1 hoặc -1).
-*   $W_v$: Trọng số tin cậy của hàng xóm đó (từ bước D).
-*   $\epsilon = 1e^{-9}$: Hằng số nhỏ để tránh lỗi chia cho 0 khi khoảng cách bằng 0.
+Giả thuyết cốt lõi: *"Những người dùng có lịch sử đánh giá game tương tự trong quá khứ sẽ có xu hướng thích những game giống nhau trong tương lai."*
 
 ---
 
-## 3. Ứng Dụng Thực Tiễn trong Code (Data Flow)
+## 1.2. Quy Trình Xử Lý Toán Học
 
-Đây là cách các công thức trên tác động trực tiếp đến dữ liệu khi chạy `UI.py` hoặc `run_KNN.bat`:
+### Bước 1: Xây Dựng Ma Trận Tương Tác (Interaction Matrix Construction)
+Dữ liệu được biểu diễn dưới dạng ma trận thưa (Sparse Matrix) để tối ưu hóa bộ nhớ:
 
-### Bước 1: Sàng lọc ứng viên (The Filter)
-*   **Input:** 1 triệu người dùng trên Steam. Bạn nhập vào 5 game (Witcher 3, Cyberpunk, ...).
-*   **Code xử lý:** `user_review_counts >= threshold`.
-*   **Tác động:** Loại bỏ 990,000 người chưa bao giờ chơi game nào trong danh sách của bạn. Chỉ giữ lại 10,000 người đã chơi ít nhất 3/5 game bạn nhập.
-*   **Ý nghĩa:** Đảm bảo "hàng xóm" là những người thực sự hiểu gu của bạn, không phải người chơi ngẫu nhiên.
+*   Mỗi hàng là một User ($u$).
+*   Mỗi cột là một Game ($i$).
+*   Giá trị $r_{ui}$:
+    *   $1$: Thích (Like/Interested).
+    *   $-1$: Không thích (Dislike).
+    *   $0$: Chưa tương tác.
 
-### Bước 2: Tìm người "cùng tần số" (Distance Calculation)
-*   **Code xử lý:** `cosine_distances(user_vector_sparse, my_vector)`.
-*   **Tác động:**
-    *   Người A chơi Witcher 3 (Like), Cyberpunk (Like) giống hệt bạn $\rightarrow$ Dist = 0.1.
-    *   Người B chơi Witcher 3 (Dislike) $\rightarrow$ Dist = 1.5.
-*   **Kết quả:** Người A sẽ có tiếng nói trọng lượng gấp 15 lần người B trong việc gợi ý game mới.
+Trong code, ma trận này được xây dựng bằng `scipy.sparse.csr_matrix` từ danh sách `(row_indices, col_indices, data)`.
 
-### Bước 3: Boost Fan cứng (Fav Weighting)
-*   **Tình huống:** Bạn đánh dấu **Thronebreaker** là "Favourite".
-*   **Code xử lý:** `if game in fav_games_set: weights *= 4`.
-*   **Tác động:** Những ai cũng thích *Thronebreaker* giống bạn sẽ được nhân 4 lần trọng số. Ý kiến của họ về các game khác sẽ trở thành "mệnh lệnh" cho hệ thống gợi ý.
+### Bước 2: Sàng Lọc Hàng Xóm (Neighbor Filtering)
+Để giảm nhiễu và tăng tốc độ, hệ thống không so sánh với toàn bộ 1 triệu người dùng, mà áp dụng bộ lọc sơ cấp:
 
-### Bước 4: Bỏ phiếu và Gợi ý (Voting)
-*   **Code xử lý:** Cộng dồn điểm số (Weighted Sum).
-*   **Tình huống:**
-    *   100 ông hàng xóm (Fan Witcher) đều Vote +1 cho game **"God of War"**.
-    *   Khoảng cách Dist rất nhỏ, Weight rất lớn.
-    *   $\rightarrow$ Điểm số của *God of War* tăng vọt lên 15.0.
-*   **Kết quả:** *God of War* xuất hiện ở Rank 1 trong bảng kết quả KNN, dù bạn chưa hề nhắc đến tên game này. Đây chính là tính năng **"Khám phá" (Serendipity)**.
+$$ \text{Threshold} = \max(1, \lfloor N_{games} \times \alpha \rfloor) $$
+
+*   $N_{games}$: Số lượng game người dùng hiện tại đã chơi.
+*   $\alpha$: Hệ số lọc (Match Percentage). Trong thực nghiệm, $\alpha = 0.5$ (50%).
+*   **Điều kiện:** Chỉ những user đã tương tác với ít nhất `Threshold` game trùng với người dùng hiện tại mới được đưa vào tập ứng viên hàng xóm ($U_{candidate}$).
+
+### Bước 3: Đo Độ Tương Đồng (Similarity Measurement)
+Sử dụng **Cosine Distance** để đo khoảng cách giữa vector người dùng hiện tại ($\vec{u}$) và vector hàng xóm ($\vec{v}$).
+
+$$ \text{Distance}(u, v) = 1 - \text{Similarity}(u, v) = 1 - \frac{\vec{u} \cdot \vec{v}}{||\vec{u}|| \times ||\vec{v}||} $$
+
+*   $\vec{u} \cdot \vec{v}$: Tích vô hướng (Dot Product).
+*   Code sử dụng `sklearn.metrics.pairwise.cosine_distances`.
+
+### Bước 4: Tính Trọng Số Đóng Góp (Weighting Scheme)
+Hệ thống áp dụng cơ chế trọng số động (Dynamic Weighting) để ưu tiên những hàng xóm "chất lượng":
+
+**a. Trọng số cơ bản (Base Weight):**
+$$ W_{base} = \frac{1}{10^{\sqrt{|\text{Fav}|}}} $$
+*(Giảm trọng số nếu người dùng có quá nhiều game yêu thích, tránh loãng).*
+
+**b. Điều chỉnh theo Game Yêu Thích (Favorite Boosting):**
+Với mỗi game $g$ mà người dùng đánh dấu là "Yêu thích" (Favourite):
+*   Nếu hàng xóm cũng thích $g$: $W_v = W_v \times 4$ (Tăng độ tin cậy gấp 4 lần).
+*   Nếu hàng xóm ghét $g$: $W_v = W_v / 2$ (Giảm độ tin cậy).
+
+### Bước 5: Dự Đoán & Xếp Hạng (Prediction & Ranking)
+Điểm số dự đoán cho game $i$ được tính bằng tổng trọng số của $K$ hàng xóm gần nhất (K-Nearest Neighbors).
+
+$$ \text{Score}(i) = \sum_{v \in \text{KNN}} \left( r_{vi} \times \frac{W_v}{\text{Distance}(u, v) + \epsilon} \right) $$
+
+*   $r_{vi}$: Đánh giá của hàng xóm $v$ cho game $i$.
+*   $\epsilon = 1e^{-9}$: Hằng số làm mượt (Smoothing) để tránh lỗi chia cho 0.
 
 ---
 
-## 4. Đánh Giá Mô Hình
+## 1.3. Thiết Kế Luồng Dữ Liệu (Implementation Pipeline)
 
-### Ưu Điểm
-1.  **Tính Khám Phá (Serendipity):** Có khả năng gợi ý các game hoàn toàn khác thể loại nhưng hợp gu (Ví dụ: Fan RPG có thể được gợi ý game Đua xe nếu cộng đồng fan RPG cũng thích đua xe).
-2.  **Không cần dữ liệu nội dung:** Không quan tâm game có tag gì, chỉ quan tâm nó có hay hay không.
-3.  **Học theo xu hướng:** Nếu cộng đồng bắt đầu chơi một game mới, hệ thống sẽ tự động cập nhật gợi ý đó cho bạn.
+Dựa trên file `test_knn_model.py` và `Data_handler.py`, quy trình thực tế diễn ra như sau:
 
-### Nhược Điểm
-1.  **Cold-start (Khởi đầu lạnh):** Không thể gợi ý game mới ra mắt chưa có ai chơi/review.
-2.  **Popularity Bias:** Dễ bị thiên kiến về các game quá nổi tiếng (như CS:GO, PUBG) nếu không lọc kỹ.
-3.  **Sparsity:** Nếu gu của bạn quá dị (game indie ít người chơi), sẽ khó tìm được hàng xóm.
+1.  **Input Processing:**
+    *   Đọc file `your_games.csv` (Lịch sử chơi) và `fav_games.csv` (Danh sách yêu thích).
+    *   Chuyển đổi review dạng chữ (Like, Interested) sang dạng số (1, 0.5, -1).
+
+2.  **Vectorization:**
+    *   Biến đổi `your_games` thành vector thưa `my_vector`.
+    *   Lọc tập dữ liệu lớn `final_reviews.csv` để tạo `user_vector_sparse`.
+
+3.  **KNN Execution:**
+    *   Tính khoảng cách Cosine.
+    *   Lấy Top $K$ hàng xóm gần nhất (Mặc định $K=1000$ hoặc $K=len(candidates)$).
+    *   Nhân ma trận thưa với vector trọng số để ra điểm số tổng hợp.
+
+4.  **Ranking & Filtering:**
+    *   Sắp xếp danh sách game theo điểm số giảm dần.
+    *   **Post-filtering:** Loại bỏ các game người dùng đã chơi (nằm trong `not_played_games_id`).
+    *   Tách riêng danh sách **Wishlist Recommendations** (Gợi ý dựa trên game đang quan tâm).
+
+---
+
+## 1.4. Đánh Giá & Tối Ưu (Evaluation & Tuning)
+
+Trong quá trình kiểm thử (Benchmarking), mô hình đã được tinh chỉnh tham số để đạt hiệu quả tối ưu:
+
+*   **Vấn đề Cold-Start:** Với người dùng mới (ít game), ngưỡng lọc $\alpha$ được hạ xuống $0.3$ để đảm bảo tìm được đủ hàng xóm.
+*   **Vấn đề Precision/Recall:**
+    *   Thực nghiệm cho thấy Precision@10 đạt **15.45%** trên tập người dùng tích cực (>50 reviews).
+    *   Recall@10 đạt **10.66%**, chứng tỏ khả năng khôi phục lại sở thích người dùng khá tốt trong không gian dữ liệu thưa.

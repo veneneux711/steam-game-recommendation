@@ -1,0 +1,45 @@
+BẮT ĐẦU KIỂM THỬ HỆ THỐNG HYBRID...
+Thời gian: 2025-12-24 12:16:03
+
+Với đầu vào là những game sau đây:
+gameID,gameName
+292030,The Witcher® 3: Wild Hunt
+20920,The Witcher 2: Assassins of Kings Enhanced Edition
+20900,The Witcher: Enhanced Edition Director's Cut
+1091500,Cyberpunk 2077
+
+==================================================
+1. PHÂN TÍCH ĐỘ TRÙNG LẶP (OVERLAP ANALYSIS)
+==================================================
+Số lượng gợi ý từ KNN: 113
+Số lượng gợi ý từ Content-Based: 189
+Số lượng game trùng nhau (Consensus): 14
+Tỷ lệ trùng lặp: 12.39%
+(Tỷ lệ này thấp là bình thường, cho thấy 2 thuật toán gợi ý các khía cạnh khác nhau)
+
+==================================================
+2. THỬ NGHIỆM TRỌNG SỐ (WEIGHT SENSITIVITY TEST)
+==================================================
+
+--- Scenario: Thiên về Cộng đồng (KNN) (KNN=0.8, CB=0.2) ---
+   Top 3 Games: ['Thronebreaker: The Witcher Tales', 'God of War', 'The Elder Scrolls V: Skyrim Special Edition']
+   Số game đồng thuận trong Top 10: 10
+
+--- Scenario: Cân bằng (Balanced) (KNN=0.5, CB=0.5) ---
+   Top 3 Games: ['Thronebreaker: The Witcher Tales', 'God of War', 'The Elder Scrolls V: Skyrim Special Edition']
+   Số game đồng thuận trong Top 10: 10
+
+--- Scenario: Thiên về Nội dung (CB) (KNN=0.2, CB=0.8) ---
+   Top 3 Games: ['Thronebreaker: The Witcher Tales', 'God of War', 'Middle-earth™: Shadow of War™']
+   Số game đồng thuận trong Top 10: 10
+
+==================================================
+GỢI Ý VIẾT BÁO CÁO (CONCLUSIONS)
+==================================================
+1. Về sự bổ trợ (Complementarity):
+   Hệ thống Hybrid kết hợp danh sách từ KNN (thường là game phổ biến) và CB (game có nội dung tương đồng).
+   Việc có 14 game trùng nhau cho thấy sự đồng thuận nhất định giữa hành vi người dùng và nội dung game.
+
+2. Về chiến lược Ranking:
+   Cơ chế 'Synergy Boost' giúp đẩy các game xuất hiện ở cả 2 thuật toán lên Top đầu.
+   Điều này giúp tăng độ tin cậy (Confidence) của gợi ý: Game vừa hay (được cộng đồng thích) vừa đúng gu (giống game đã chơi).

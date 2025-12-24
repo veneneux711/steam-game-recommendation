@@ -1,121 +1,81 @@
-# Cơ Sở Lý Thuyết và Công Thức của Content-Based Model
+# CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ QUY TRÌNH CONTENT-BASED FILTERING
 
-## 1. Tổng Quan
-**Content-Based Filtering (Lọc dựa trên nội dung)** là phương pháp gợi ý dựa trên sự tương đồng giữa hồ sơ người dùng và đặc điểm của vật phẩm. Trong dự án Steam ML, chúng ta xây dựng vector đặc trưng cho mỗi game từ **Genres (Thể loại)** và **Tags (Nhãn)**, sau đó so sánh với vector sở thích của người dùng.
+## 2.1. Tổng Quan Phương Pháp
+Hệ thống sử dụng phương pháp **Content-Based Filtering (Lọc dựa trên nội dung)** kết hợp với kỹ thuật **Latent Semantic Analysis (LSA)**. Thay vì chỉ so khớp từ khóa đơn thuần, hệ thống sử dụng thuật toán SVD để hiểu ngữ nghĩa tiềm ẩn của Game Tags và Genres, giúp đưa ra gợi ý chính xác ngay cả khi dữ liệu thưa thớt.
 
----
+## 2.2. Các Bước Xử Lý Thuật Toán (Model Logic)
 
-## 2. Quy Trình Xử Lý & Công Thức
+Dựa trên code `ContentBased_model.py`, quy trình xử lý bao gồm 4 giai đoạn chính:
 
-### A. Xử lý Trọng số Vị trí (Positional Weighting)
-Trước khi vector hóa, văn bản được xử lý để tăng cường tầm quan trọng của các từ khóa chính. Hệ thống mô phỏng cách Steam xếp hạng Tag (Tag đầu tiên quan trọng nhất).
+### Giai đoạn 1: Feature Engineering (Tạo đặc trưng có trọng số)
+Hệ thống không coi tất cả thông tin là ngang hàng. Trong hàm `prepare_content_features`, một kỹ thuật **Frequency Weighting** được áp dụng:
+*   **Genres (Thể loại):** Được nhân bản **4 lần**.
+*   **Tags (Nhãn):** Giữ nguyên (1 lần).
+*   **Mục đích:** Ép thuật toán coi trọng Thể loại chính (RPG, Action...) hơn là các tag phụ (Indie, 2D...), đảm bảo game được gợi ý luôn đúng thể loại người dùng muốn.
 
-*   **Genres:** Nhân bản **4 lần** (Vì thể loại là yếu tố cốt lõi).
-*   **Top 3 Tags:** Nhân bản **3 lần**.
-*   **Top 4-10 Tags:** Nhân bản **2 lần**.
-*   **Các Tags còn lại:** Giữ nguyên (1 lần).
+### Giai đoạn 2: Vectorization & Dimensionality Reduction
+Chuyển đổi văn bản thành không gian số học:
 
-**Tác dụng:** Giúp thuật toán ưu tiên tìm kiếm các game cùng thể loại chính (VD: RPG) trước khi xét đến các yếu tố phụ (VD: Singleplayer).
+1.  **TF-IDF (Term Frequency - Inverse Document Frequency):**
+    *   Chuyển văn bản thành vector với kích thước 5,000 đặc trưng.
+    *   Loại bỏ các từ quá phổ biến (Stop words, max_df=0.7) để lọc nhiễu.
 
-### B. TF-IDF (Term Frequency - Inverse Document Frequency)
-Chuyển đổi văn bản thành vector số học.
+2.  **Truncated SVD (Singular Value Decomposition):**
+    *   Giảm chiều dữ liệu từ **5,000 chiều** xuống **100 chiều**.
+    *   **Tại sao dùng SVD?**
+        *   Tăng tốc độ tính toán (Dense Matrix nhanh hơn Sparse Matrix).
+        *   Khử nhiễu (Noise Reduction).
+        *   Bắt được ngữ nghĩa ẩn (Latent Meaning): Ví dụ, máy sẽ hiểu "Shooter" và "FPS" có vector gần nhau trong không gian 100 chiều.
 
-$$ \text{TF-IDF}(t, d) = \text{TF}(t, d) \times \text{IDF}(t) $$
+### Giai đoạn 3: Xây Dựng Hồ Sơ Người Dùng (User Profiling)
+Hồ sơ người dùng ($V_{user}$) không phải là trung bình cộng đơn giản, mà là **Trung bình cộng có trọng số (Weighted Average)** dựa trên Rating:
+*   Rating 5 sao $\rightarrow$ Trọng số $w=3$.
+*   Rating 4 sao $\rightarrow$ Trọng số $w=2$.
+*   Rating 3 sao $\rightarrow$ Trọng số $w=1$.
 
-*   **$\text{TF}(t, d)$**: Tần suất từ $t$ xuất hiện trong mô tả game $d$ (đã được nhân bản ở bước A).
-*   **$\text{IDF}(t) = \log(\frac{N}{df_t})$**: Đánh giá độ hiếm của từ. Từ xuất hiện ở quá nhiều game (như "Indie", "Action") sẽ có trọng số thấp, từ đặc trưng (như "Cyberpunk", "Souls-like") sẽ có trọng số cao.
+Công thức:
+$$ V_{user} = \frac{\sum (V_{game\_i} \times w_i)}{\sum w_i} $$
+*(Code: `np.average(..., weights=weights)`) - Điều này giúp game người dùng "thích nhất" sẽ kéo vector sở thích về phía nó mạnh nhất.*
 
-### C. Giảm chiều dữ liệu (SVD / LSA)
-Sử dụng **Truncated SVD** để giảm số chiều của ma trận TF-IDF xuống còn **100 chiều**.
+### Giai đoạn 4: Tính Điểm & Bộ Lọc "Shovelware" (Recommendation & Filtering)
+Đây là phần tinh túy nhất trong code của bạn để loại bỏ game rác.
 
-$$ A \approx U \times \Sigma \times V^T $$
+1.  **Similarity Score ($S_{sim}$):** Tính Cosine Similarity giữa $V_{user}$ và $V_{game}$.
+2.  **Popularity Score ($S_{pop}$):**
+    $$ S_{pop} = \frac{\log_{10}(\text{Total Reviews} + 1)}{10.0} $$
+    *(Dùng Logarit để tránh việc game bom tấn áp đảo hoàn toàn game nhỏ).*
+3.  **Shovelware Filter (Bộ lọc game rác):**
+    Hệ thống trừng phạt nặng các game có dấu hiệu là "Shovelware" (Game chất lượng kém làm ra để kiếm tiền nhanh):
+    *   **Điều kiện:** Tổng Review < 100.
+    *   **Xử lý:**
+        *   Nếu Giá < $9.99 (Rẻ + Ít review): **Phạt 75% điểm số** ($Score \times 0.25$).
+        *   Nếu Giá $\ge$ $9.99 (Đắt + Ít review): **Phạt 10% điểm số** ($Score \times 0.9$).
 
-**Tác dụng:**
-*   **Latent Semantic Analysis (LSA):** Giúp máy tính hiểu "ngữ nghĩa" thay vì chỉ bắt từ khóa. Ví dụ: Máy sẽ hiểu *FPS* và *Shooter* có liên quan đến nhau.
-*   **Xử lý ma trận thưa:** Giúp tính toán nhanh hơn và loại bỏ nhiễu.
-
-### D. Vector Hồ sơ Người dùng ($V_{user}$)
-Được tính bằng trung bình cộng có trọng số (Weighted Average) của các game người dùng đã đánh giá.
-
-$$ V_{user} = \frac{\sum (V_{game_i} \times w_i)}{\sum w_i} $$
-
-**Trong đó:**
-*   $V_{game_i}$: Vector đặc trưng của game thứ $i$.
-*   $w_i$: Trọng số dựa trên Rating của người dùng.
-    *   Rating 5 sao $\rightarrow w = 3$
-    *   Rating 4 sao $\rightarrow w = 2$
-    *   Rating 3 sao $\rightarrow w = 1$
-
-### E. Tính Điểm Tương Đồng ($S_{sim}$)
-Sử dụng **Cosine Similarity** để đo góc giữa vector người dùng và vector game.
-
-$$ S_{sim}(u, g) = \cos(V_{user}, V_{game}) = \frac{V_{user} \cdot V_{game}}{||V_{user}|| \times ||V_{game}||} $$
-
-Kết quả $S_{sim}$ nằm trong khoảng $[-1, 1]$, càng gần 1 thì game càng phù hợp với sở thích người dùng.
-
-### F. Điểm Phổ biến ($S_{pop}$)
-Sử dụng Logarithm để chuẩn hóa số lượng Review, tránh việc game bom tấn lấn át hoàn toàn game Indie.
-
-$$ S_{pop} = \frac{\log_{10}(\text{Total Reviews} + 1)}{10.0} $$
-
-### G. Điểm Số Cuối Cùng & Bộ Lọc
-Điểm cuối cùng ($Final\_Score$) là sự kết hợp giữa độ tương đồng và độ phổ biến, áp dụng thêm các hình phạt (Penalty) để lọc rác.
-
-$$ \text{Base Score} = (S_{sim} \times 0.85) + (S_{pop} \times 0.15) $$
-
-**Bộ lọc Shovelware (Shovelware Filter):**
-Nếu game có ít hơn 100 review (hoặc dữ liệu lỗi):
-1.  **Nếu giá < $9.99:**
-    *   $Final\_Score = \text{Base Score} \times 0.25$ (Phạt nặng 75% - Nghi ngờ game rác).
-    *   *Ngoại lệ:* Nếu $S_{sim} > 0.8$ (Rất giống) thì chỉ phạt nhẹ ($\times 0.6$).
-2.  **Nếu giá $\ge$ $9.99:**
-    *   $Final\_Score = \text{Base Score} \times 0.9$ (Phạt nhẹ 10% do thiếu dữ liệu tin cậy).
+4.  **Final Score:**
+    $$ Final = (S_{sim} \times 0.85) + (S_{pop} \times 0.15) \times \text{Penalty} $$
 
 ---
 
-Dưới đây là cách các công thức toán học trên tác động trực tiếp đến dữ liệu trong quá trình chạy `ContentBased_model.py`:
+## 2.3. Quy Trình Xử Lý Dữ Liệu (Data Pipeline)
 
-### Bước 1: Tiền xử lý dữ liệu (Positional Weighting)
-*   **Dữ liệu đầu vào:** Một dòng trong CSV: `Genres: "RPG", Tags: "Open World, Story Rich"`.
-*   **Xử lý trong Code:** Hàm `prepare_content_features` thực hiện nhân bản chuỗi (String Multiplication).
-*   **Dữ liệu đầu ra:** Chuỗi văn bản mới: `"RPG RPG RPG RPG Open World Open World Open World Story Rich Story Rich Story Rich"`.
-*   **Tác dụng thực tế:** Khi đưa vào TF-IDF, từ "RPG" sẽ có tần suất xuất hiện (Term Frequency) cao gấp 4 lần bình thường. Điều này ép máy tính phải tìm các game có chữ "RPG" trước tiên.
+Dựa trên code `ContentBased_data_handler.py`, quy trình ETL (Extract - Transform - Load) xử lý các vấn đề thực tế của dữ liệu Steam:
 
-### Bước 2: Ma trận hóa & Giảm chiều (TF-IDF + SVD)
-*   **Code:** `vectorizer.fit_transform()` sau đó là `svd.fit_transform()`.
-*   **Biến đổi dữ liệu:**
-    1.  Từ 110,000 dòng văn bản game.
-    2.  $\rightarrow$ Ma trận thưa (Sparse Matrix) khổng lồ: `(110000 dòng x 5000 cột từ khóa)`. Hầu hết là số 0.
-    3.  $\rightarrow$ **Ma trận đặc (Dense Matrix):** `(110000 dòng x 100 cột)`.
-*   **Tác dụng thực tế:** Thay vì lưu trữ hàng ngàn số 0 vô nghĩa, mỗi game giờ đây được đại diện bởi **100 con số thực** (Ví dụ: `[0.12, -0.5, 0.88, ...]`). 100 con số này là "tọa độ" của game trong không gian ngữ nghĩa.
+### A. Làm sạch dữ liệu (Data Cleaning)
+1.  **Sửa lỗi lệch cột (Column Misalignment Fix):**
+    *   Phát hiện file CSV gốc bị lỗi header (Cột `AppID` chứa Tên game, cột `Name` chứa Ngày tháng).
+    *   Code tự động đổi tên (`rename`) để đưa dữ liệu về đúng cột.
+2.  **Chuẩn hóa kiểu dữ liệu (Type Casting):**
+    *   **Price:** Xử lý các chuỗi phức tạp như "Free to Play", "$19.99", "Free" $\rightarrow$ Chuyển về số thực `0.0` hoặc `19.99`.
+    *   **Reviews:** Loại bỏ dấu phẩy (1,234 $\rightarrow$ 1234) để tính toán toán học.
 
-### Bước 3: Tạo "Tâm điểm" sở thích (Weighted User Profile)
-*   **Tình huống:** Bạn thích *Witcher 3* (5 sao) và thấy *Among Us* bình thường (3 sao).
-*   **Xử lý trong Code:**
-    *   Trọng số: *Witcher 3* ($w=3$), *Among Us* ($w=1$).
-    *   Công thức `np.average`:
-        $$ \frac{(Vector_{Witcher} \times 3) + (Vector_{AmongUs} \times 1)}{4} $$
-*   **Tác dụng thực tế:** Vector kết quả ($V_{user}$) sẽ nằm rất gần tọa độ của *Witcher 3* và bị kéo lệch một chút về phía *Among Us*. Khi tìm kiếm, hệ thống sẽ quét xung quanh tọa độ này.
+### B. Lưu trữ phản hồi (Feedback Loop)
+*   Dữ liệu đánh giá của người dùng (User Ratings) được lưu trữ dưới dạng **JSON** (`cb_user_ratings.json`).
+*   Cấu trúc JSON lưu `AppID` chuẩn xác, giúp hệ thống tái sử dụng dữ liệu cho các lần chạy sau mà không cần người dùng nhập lại.
 
-### Bước 4: Quét và Lọc (Similarity & Filtering)
-*   **Code:** `cosine_similarity(user_profile, all_games)`.
-*   **Tác động:** Tạo ra một danh sách 110,000 con số (từ -1 đến 1).
-    *   Game *Skyrim*: 0.85 (Góc rất nhỏ $\rightarrow$ Rất giống).
-    *   Game *FIFA 23*: 0.05 (Góc vuông $\rightarrow$ Không liên quan).
-*   **Logic Lọc (Shovelware Filter):**
-    *   Máy tính tìm thấy một game clone rẻ tiền có tag y hệt *Witcher 3*. Độ giống lên tới **0.9**.
-    *   Code kiểm tra: `Price < 9.99` và `Review < 100`.
-    *   **Hành động:** Nhân điểm 0.9 với 0.25 $\rightarrow$ Còn **0.225**.
-    *   **Kết quả:** Game rác bị đá văng khỏi Top 20, nhường chỗ cho game xịn.
 ---
-## 4. Ưu và Nhược Điểm
 
-### Ưu Điểm
-1.  **Cá nhân hóa cao:** Không phụ thuộc vào người dùng khác, chỉ tập trung vào sở thích riêng biệt của người dùng.
-2.  **Giải thích được:** Có thể giải thích lý do gợi ý (VD: "Gợi ý game này vì bạn thích game A, B").
-3.  **Khả năng "Cold-start" cho Item mới:** Có thể gợi ý các game vừa mới ra mắt (chưa có rating) miễn là có thông tin Tags/Genres.
-
-### Nhược Điểm
-1.  **Over-specialization:** Chỉ gợi ý các game "na ná" những gì đã chơi, khó khám phá ra các thể loại mới lạ.
-2.  **Phụ thuộc vào Metadata:** Nếu Tags/Genres của game bị gắn sai, kết quả sẽ không chính xác.
-## 3. Ứng Dụng Thực Tiễn trong Code (Data Flow)
+## 2.4. Tổng Kết
+Mô hình Content-Based được xây dựng không chỉ dựa trên lý thuyết TF-IDF cơ bản mà còn được tối ưu hóa cho bài toán thực tế của Steam thông qua:
+1.  **SVD:** Giúp hiểu ngữ nghĩa sâu hơn.
+2.  **Weighted Profile:** Tôn trọng mức độ yêu thích khác nhau của người dùng.
+3.  **Shovelware Filter:** Kỹ thuật lọc nhiễu dựa trên tri thức miền (Domain Knowledge) về thị trường game (Giá rẻ + Ít review thường là game kém chất lượng).

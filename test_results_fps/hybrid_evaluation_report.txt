@@ -1,0 +1,46 @@
+BẮT ĐẦU KIỂM THỬ HỆ THỐNG HYBRID...
+Thời gian: 2025-12-24 13:23:05
+
+với các game:
+gameID,gameName,review
+10,Counter-Strike,1
+240,Counter-Strike: Source,1
+80,Counter-Strike: Condition Zero,1
+1237970,Titanfall® 2,1
+440,Team Fortress 2,1
+
+==================================================
+1. PHÂN TÍCH ĐỘ TRÙNG LẶP (OVERLAP ANALYSIS)
+==================================================
+Số lượng gợi ý từ KNN: 41
+Số lượng gợi ý từ Content-Based: 189
+Số lượng game trùng nhau (Consensus): 10
+Tỷ lệ trùng lặp: 24.39%
+(Tỷ lệ này thấp là bình thường, cho thấy 2 thuật toán gợi ý các khía cạnh khác nhau)
+
+==================================================
+2. THỬ NGHIM TRỌNG SỐ (WEIGHT SENSITIVITY TEST)
+==================================================
+
+--- Scenario: Thiên về Cộng đồng (KNN) (KNN=0.8, CB=0.2) ---
+   Top 3 Games: ['Counter-Strike: Global Offensive', 'Left 4 Dead', 'Half-Life']
+   Số game đồng thuận trong Top 10: 10
+
+--- Scenario: Cân bằng (Balanced) (KNN=0.5, CB=0.5) ---
+   Top 3 Games: ['Counter-Strike: Global Offensive', 'Left 4 Dead', 'Half-Life']
+   Số game đồng thuận trong Top 10: 10
+
+--- Scenario: Thiên về Nội dung (CB) (KNN=0.2, CB=0.8) ---
+   Top 3 Games: ['Counter-Strike: Global Offensive', 'Left 4 Dead', 'Half-Life']
+   Số game đồng thuận trong Top 10: 10
+
+==================================================
+GỢI Ý VIẾT BÁO CÁO (CONCLUSIONS)
+==================================================
+1. Về sự bổ trợ (Complementarity):
+   Hệ thống Hybrid kết hợp danh sách từ KNN (thường là game phổ biến) và CB (game có nội dung tương đồng).
+   Việc có 10 game trùng nhau cho thấy sự đồng thuận nhất định giữa hành vi người dùng và nội dung game.
+
+2. Về chiến lược Ranking:
+   Cơ chế 'Synergy Boost' giúp đẩy các game xuất hiện ở cả 2 thuật toán lên Top đầu.
+   Điều này giúp tăng độ tin cậy (Confidence) của gợi ý: Game vừa hay (được cộng đồng thích) vừa đúng gu (giống game đã chơi).

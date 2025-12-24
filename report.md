@@ -8,8 +8,8 @@
 
 ### 1.1. Vấn đề (Problem Statement)
 Với kho dữ liệu khổng lồ hàng chục nghìn tựa game trên Steam, người dùng gặp phải vấn đề **"Quá tải thông tin" (Information Overload)**. Các hệ thống gợi ý truyền thống thường gặp hạn chế:
-*   **Content-Based:** Gợi ý quá an toàn, lặp lại lối mòn (Over-specialization).
-*   **Collaborative Filtering:** Gặp khó khăn với game mới (Cold-start) và thiên kiến về các game quá nổi tiếng (Popularity Bias).
+*   **Overbloated history** Steam đọc quá nhiều game mà user đã review, có thể họ chơi quá nhiều thể loại và đều thích 1 vài game trong số đó
+*   **Game rác/Game nhồi nhét content thừa thãi** Nhằm "bypass" hệ thống recommend của game, dev có thể add rất nhiều tính năng "cho có" mà không liên quan đến content chính của game
 
 ### 1.2. Giải pháp (Solution)
 Dự án xây dựng một hệ thống **Hybrid Recommendation** kết hợp sức mạnh của Xử lý ngôn ngữ tự nhiên (NLP) và Khai phá dữ liệu hành vi cộng đồng. Hệ thống sử dụng cơ chế **"Synergy Boost" (Cộng hưởng)** để ưu tiên các tựa game đạt được sự đồng thuận giữa nội dung và thị hiếu đám đông.

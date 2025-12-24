@@ -59,7 +59,7 @@ Kiểm tra khả năng dự đoán hành vi người dùng dựa trên lịch s�
     ```
 *   **Cấu hình tối ưu:** Top-10 gợi ý, User có > 50 reviews.
 *   **Chỉ số quan trọng:**
-    *   **Precision@10:** Độ chính xác trong 10 gợi ý đầu (Kỳ vọng > 10%).
+    *   **Precision@10:** Độ chính xác trong 10 gợi ý đầu (Kỳ vọng ~= 10%).
     *   **Recall@10:** Khả năng tìm lại các game yêu thích đã bị ẩn (Kỳ vọng > 10%).
 
 ### Bước 3: Phân Tích Hybrid Model

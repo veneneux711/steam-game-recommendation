@@ -108,7 +108,7 @@ Mở terminal tại thư mục `test_scripts/` và chạy lần lượt các l�
     ```bash
     python visualize_final_report.py
     ```
-    *   *Kết quả:* File ảnh `test_results/final_dashboard_professional.png` dùng để chèn vào báo cáo đồ án.
+    *   *Kết quả:* File ảnh `test_results/final_dashboard_professional.png`.
 
 ---
 

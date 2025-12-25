@@ -82,8 +82,6 @@ pip install pandas numpy scikit-learn scipy matplotlib
 **Bước 3: Chạy Mô hình Hybrid (Kết quả cuối cùng)**
 *   File chạy: `run_Hybrid.bat`
 *   Kết quả: Hệ thống sẽ tự động đọc kết quả từ Bước 1 & 2, tính toán điểm số cộng hưởng và hiển thị bảng xếp hạng tối ưu nhất.
-    *   **Màu Xanh:** Game "Đồng thuận" (Được cả 2 mô hình đề xuất - Khuyên dùng).
-    *   **Màu Trắng:** Game tiềm năng từ một nguồn đơn lẻ.
 
 ---
 

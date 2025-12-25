@@ -62,7 +62,9 @@ Kiểm tra khả năng dự đoán hành vi người dùng dựa trên lịch s�
     *   **Precision@10:** Độ chính xác trong 10 gợi ý đầu (Kỳ vọng ~= 10%).
     *   **Recall@10:** Khả năng tìm lại các game yêu thích đã bị ẩn (Kỳ vọng > 10%).
 
-### Bước 3: Phân Tích Hybrid Model
+###Phân Tích Hybrid Model
+Do đặc thù 2 dataset khác nhau, và hệ thống knn chỉ thực sự toả sáng khi làm việc với lượng nhỏ data game từ người dùng nhập vào nên Hybrid model sẽ chỉ đánh giá trong các trường hợp cụ thể
+*   2 file .bat của CB và KNN cần chạy trước nhằm nhập game vào, lưu data và lấy gợi ý
 Kiểm tra cơ chế kết hợp và độ ổn định của hệ thống lai.
 *   **Điều kiện:** Cần chạy `run_hybrid_system.py` ở thư mục gốc trước để tạo ra file `results/hybrid_ranking.csv` (nếu chưa có).
 *   **Lệnh chạy:**
@@ -85,7 +87,7 @@ Tổng hợp toàn bộ số liệu thành biểu đồ chuyên nghiệp.
 
 ## 4. Hướng Dẫn Đọc Biểu Đồ (Dashboard Analysis)
 
-Sử dụng ảnh `final_dashboard_professional.png` để đưa vào báo cáo.
+Sử dụng ảnh `final_dashboard_professional.png`.
 
 ### Biểu đồ A: Content-Based Performance (Cột Xanh)
 *   Thể hiện độ an toàn của hệ thống.
@@ -97,6 +99,7 @@ Sử dụng ảnh `final_dashboard_professional.png` để đưa vào báo cáo.
 *   **Recall (10.66%):** Tỷ lệ bao phủ, tìm lại được các game cũ.
 *   *Lưu ý:* Precision thấp là bình thường với không gian dữ liệu lớn như Steam.
 
+### Với việc chạy cá nhân cho file test_result_cd_rpg
 ### Biểu đồ C: Hybrid Composition (Biểu đồ Tròn)
 *   Phân tích nguồn gốc của các game trong Top Ranking.
 *   **Màu Tím (Đồng thuận - Consensus):** Đây là vùng quan trọng nhất. Nếu miếng này xuất hiện, chứng tỏ thuật toán Hybrid hoạt động hiệu quả, lọc ra được những "siêu phẩm" vừa đúng gu (Content) vừa hay (KNN).

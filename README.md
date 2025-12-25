@@ -60,9 +60,13 @@ Chạy file `setup.bat` hoặc cài thủ công qua terminal:
 pip install pandas numpy scikit-learn scipy matplotlib
 ```
 Tải 2 nguồn data từ Source.txt
+
 Để data KNN sau khi giải nén vào folder KNN_model
+
 Đổi tên data ContentBased thành CV_games.csv và để vào folder CB_model
+
 Chạy file data_preprocessing trong KNN_model
+
 Chạy file reduce_data.py trong CB_model
 
 ### 3. Hướng Dẫn Sử Dụng

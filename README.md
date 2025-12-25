@@ -76,7 +76,7 @@ pip install pandas numpy scikit-learn scipy matplotlib
 *   Thao tác:
     1.  Tìm kiếm và Rate 5-10 game bạn thích.
     2.  Bấm "Save Ratings".
-    3.  Bấm "Train Model" (Lần đầu chạy).
+    3.  Bấm "Train Model".
     4.  Bấm "Get Recommendations" (Bắt buộc để sinh file dữ liệu cho bước sau).
 
 **Bước 3: Chạy Mô hình Hybrid (Kết quả cuối cùng)**
